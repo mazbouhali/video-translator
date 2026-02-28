@@ -1,0 +1,49 @@
+# Arabic Video Translator
+# 
+# Usage:
+#   docker compose up          # Start (GPU auto-detected)
+#   docker compose up -d       # Start in background
+#   docker compose logs -f     # View logs
+#   docker compose down        # Stop
+#
+# Drop videos in ./input/ → Get results in ./output/
+
+services:
+  translator:
+    build: .
+    container_name: arabic-translator
+    
+    # GPU support (ignored if no NVIDIA GPU present)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    volumes:
+      # Input: drop videos here
+      - ./input:/app/input:ro
+      # Output: translated videos appear here  
+      - ./output:/app/output
+      # Models: cached between runs (saves re-downloading)
+      - ./models:/app/models
+      # Temp: working files
+      - ./temp:/app/temp
+    
+    environment:
+      # Translation settings
+      - SOURCE_LANG=ar          # Arabic (input)
+      - TARGET_LANG=en          # English (output)
+      - WHISPER_MODEL=medium    # Model size: tiny/base/small/medium/large
+      
+      # Processing options
+      - WATCH_INTERVAL=5        # Check for new files every N seconds
+      - DELETE_SOURCE=false     # Keep original files in input/
+      
+      # GPU settings (auto-detected, override if needed)
+      - NVIDIA_VISIBLE_DEVICES=all
+    
+    # Auto-restart on crash
+    restart: unless-stopped

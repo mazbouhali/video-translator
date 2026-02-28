@@ -1,0 +1,18 @@
+# CPU-only override for systems without NVIDIA GPU
+# 
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.cpu.yml up
+
+services:
+  translator:
+    # Remove GPU reservation
+    deploy:
+      resources:
+        reservations:
+          devices: []
+    
+    # Override to use CPU
+    environment:
+      - CUDA_VISIBLE_DEVICES=-1
+      - DEVICE=cpu
+      # Use smaller model for CPU
+      - WHISPER_MODEL=small

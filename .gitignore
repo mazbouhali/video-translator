@@ -1,0 +1,43 @@
+# Video/Audio files (users provide their own)
+input/*.mp4
+input/*.mkv
+input/*.avi
+input/*.mov
+input/*.webm
+output/*
+temp/*
+
+# Keep directory structure
+!input/.gitkeep
+!output/.gitkeep
+!models/.gitkeep
+
+# Downloaded models (large, re-downloadable)
+models/*
+!models/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+!temp/.gitkeep

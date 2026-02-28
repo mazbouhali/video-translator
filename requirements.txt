@@ -1,0 +1,22 @@
+# Arabic Video Translator - Dependencies
+
+# Core ML/AI
+torch>=2.0.0
+openai-whisper>=20231117
+transformers>=4.35.0
+sentencepiece>=0.1.99
+
+# Progress and CLI
+tqdm>=4.66.0
+rich>=13.0.0
+
+# Audio processing (whisper dependency)
+# ffmpeg-python>=0.2.0  # Optional: if you want Python ffmpeg bindings
+
+# Utilities
+numpy>=1.24.0
+
+# Note: ffmpeg must be installed separately via system package manager:
+#   macOS: brew install ffmpeg
+#   Ubuntu: sudo apt install ffmpeg
+#   Windows: choco install ffmpeg
