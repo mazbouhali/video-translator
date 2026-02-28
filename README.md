@@ -26,7 +26,39 @@ Automatically translate foreign language speech in videos to English subtitles u
 
 ## 🚀 Quick Start
 
-### Installation
+### Option 1: One-Line Install (Recommended)
+
+**Mac/Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/mazbouhali/video-translator/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/mazbouhali/video-translator/main/install.ps1 | iex
+```
+
+Then start with:
+```bash
+cd ~/video-translator
+docker compose up
+```
+
+---
+
+### Option 2: Manual Docker Install
+
+```bash
+git clone https://github.com/mazbouhali/video-translator.git
+cd video-translator
+docker compose up
+```
+
+That's it. Drop videos in `input/`, get results in `output/`.
+
+---
+
+### Option 3: Manual Python Install (No Docker)
 
 ```bash
 # Clone the repository
