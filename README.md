@@ -38,7 +38,10 @@ curl -fsSL https://raw.githubusercontent.com/mazbouhali/video-translator/main/in
 irm https://raw.githubusercontent.com/mazbouhali/video-translator/main/install.ps1 | iex
 ```
 
-After install, double-click **start.command** (Mac) or **start.bat** (Windows) to launch.
+After install, launch with:
+- **Linux:** `./start.sh` (or `./start-amd.sh` for AMD GPUs)
+- **Mac:** Double-click `start.command`
+- **Windows:** Double-click `start.bat`
 
 ---
 
@@ -111,36 +114,12 @@ python -m app.web --port 8080
 
 ## ⚙️ Configuration
 
-### Environment Variables
+**No configuration needed** — defaults work out of the box.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AVT_WHISPER_MODEL` | Whisper model | `large-v3` |
-| `AVT_TRANSLATION_MODEL` | Translation model | `nllb` |
-| `AVT_DEVICE` | Compute device | auto-detect |
-| `AVT_OUTPUT_DIR` | Output directory | same as input |
-| `AVT_SERVER_PORT` | Web UI port | `7860` |
-| `AVT_SHARE` | Enable public link | `false` |
-
-### Config File (Optional)
-
-No config needed — defaults work great. But if you want to customize, create `~/.config/video-translator/config.json`:
-
-```json
-{
-  "transcription": {
-    "model": "large-v3",
-    "language": "ar"
-  },
-  "translation": {
-    "model": "nllb",
-    "batch_size": 8
-  },
-  "subtitle": {
-    "font_size": 24,
-    "position": "bottom"
-  }
-}
+To change model size, edit `docker-compose.yml`:
+```yaml
+environment:
+  - WHISPER_MODEL=large    # Options: tiny, base, small, medium, large
 ```
 
 ## 🎮 GPU Support
