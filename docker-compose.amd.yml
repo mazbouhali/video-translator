@@ -10,4 +10,4 @@ services:
     group_add:
       - video
     environment:
-      - HSA_OVERRIDE_GFX_VERSION=11.0.0
+      - HSA_OVERRIDE_GFX_VERSION=12.0.0
