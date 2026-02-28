@@ -18,20 +18,23 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check Docker running
+# Check Docker running, start if needed
 if ! docker info &> /dev/null; then
-    echo "❌ Docker is not running."
-    echo ""
+    echo "→ Docker not running, starting it..."
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "Please start Docker Desktop and try again."
+        open -a Docker
+        echo "  Waiting for Docker Desktop to start..."
+        while ! docker info &> /dev/null; do
+            sleep 2
+        done
     else
-        echo "Start it with:"
-        echo "  sudo systemctl start docker"
-        echo ""
-        echo "To auto-start on boot:"
-        echo "  sudo systemctl enable docker"
+        sudo systemctl start docker
+        if ! docker info &> /dev/null; then
+            echo "❌ Failed to start Docker. Try: sudo systemctl start docker"
+            exit 1
+        fi
     fi
-    exit 1
+    echo "✓ Docker started"
 fi
 
 echo "✓ Docker found"
