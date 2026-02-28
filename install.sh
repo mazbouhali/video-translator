@@ -87,10 +87,13 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📁 Installed to: $INSTALL_DIR"
 echo ""
-echo "To start:"
-echo "  • Mac: Double-click start.command"
-echo "  • Linux: ./start.command"
-echo "  • Or: cd $INSTALL_DIR && docker compose up"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "To start: Double-click start.command"
+else
+    echo "To start:"
+    echo "  cd $INSTALL_DIR"
+    echo "  ./start.sh"
+fi
 echo ""
 echo "Opens at: http://localhost:7860"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
