@@ -20,7 +20,17 @@ fi
 
 # Check Docker running
 if ! docker info &> /dev/null; then
-    echo "❌ Docker is not running. Please start Docker Desktop and try again."
+    echo "❌ Docker is not running."
+    echo ""
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "Please start Docker Desktop and try again."
+    else
+        echo "Start it with:"
+        echo "  sudo systemctl start docker"
+        echo ""
+        echo "To auto-start on boot:"
+        echo "  sudo systemctl enable docker"
+    fi
     exit 1
 fi
 
