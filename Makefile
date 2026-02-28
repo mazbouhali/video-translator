@@ -9,11 +9,18 @@ help: ## Show this help
 build: ## Build Docker image
 	docker compose build
 
-run: ## Start translator in watch mode (background)
+run: ## Start web UI in background, open browser
 	docker compose up -d
-	@echo "✓ Started! Drop videos in ./input/ folder"
+	@sleep 2
+	@echo "✓ Started! Opening http://localhost:7860"
+	@open http://localhost:7860 2>/dev/null || xdg-open http://localhost:7860 2>/dev/null || echo "Open http://localhost:7860 in your browser"
 	@echo "  View logs: make logs"
 	@echo "  Stop: make stop"
+
+watch: ## Start folder watch mode (no web UI)
+	docker compose -f docker-compose.yml -f docker-compose.watch.yml up -d
+	@echo "✓ Watching ./input/ for videos"
+	@echo "  Results go to ./output/"
 
 up: run ## Alias for 'run'
 

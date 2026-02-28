@@ -1,17 +1,20 @@
-# Arabic Video Translator
+# Video Translator
 # 
 # Usage:
-#   docker compose up          # Start (GPU auto-detected)
-#   docker compose up -d       # Start in background
-#   docker compose logs -f     # View logs
-#   docker compose down        # Stop
+#   docker compose up        # Start web UI at http://localhost:7860
+#   docker compose up -d     # Start in background
+#   docker compose down      # Stop
 #
-# Drop videos in ./input/ → Get results in ./output/
+# Open http://localhost:7860 in your browser to translate videos!
 
 services:
   translator:
     build: .
-    container_name: arabic-translator
+    container_name: video-translator
+    
+    # Web UI port
+    ports:
+      - "7860:7860"
     
     # GPU support (ignored if no NVIDIA GPU present)
     deploy:
@@ -23,8 +26,8 @@ services:
               capabilities: [gpu]
     
     volumes:
-      # Input: drop videos here
-      - ./input:/app/input:ro
+      # Input: drop videos here (also available via web UI)
+      - ./input:/app/input
       # Output: translated videos appear here  
       - ./output:/app/output
       # Models: cached between runs (saves re-downloading)
@@ -38,12 +41,15 @@ services:
       - TARGET_LANG=en          # English (output)
       - WHISPER_MODEL=medium    # Model size: tiny/base/small/medium/large
       
-      # Processing options
-      - WATCH_INTERVAL=5        # Check for new files every N seconds
-      - DELETE_SOURCE=false     # Keep original files in input/
+      # Web UI settings
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
       
       # GPU settings (auto-detected, override if needed)
       - NVIDIA_VISIBLE_DEVICES=all
     
     # Auto-restart on crash
     restart: unless-stopped
+    
+    # Default: launch web UI
+    command: python -m app.web

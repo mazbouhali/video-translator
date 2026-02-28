@@ -1,0 +1,10 @@
+# Folder Watch Mode (alternative to web UI)
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.watch.yml up
+#
+# Drop videos in ./input/ → Get results in ./output/
+
+services:
+  translator:
+    command: python main.py --watch
+    ports: []  # No web UI needed

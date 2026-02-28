@@ -38,11 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/mazbouhali/video-translator/main/in
 irm https://raw.githubusercontent.com/mazbouhali/video-translator/main/install.ps1 | iex
 ```
 
-Then start with:
-```bash
-cd ~/video-translator
-docker compose up
-```
+The script will ask to start automatically and open **http://localhost:7860** in your browser.
 
 ---
 
@@ -54,7 +50,7 @@ cd video-translator
 docker compose up
 ```
 
-That's it. Drop videos in `input/`, get results in `output/`.
+Open **http://localhost:7860** — drag and drop your video, get English subtitles.
 
 ---
 
