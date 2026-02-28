@@ -122,9 +122,9 @@ python -m app.web --port 8080
 | `AVT_SERVER_PORT` | Web UI port | `7860` |
 | `AVT_SHARE` | Enable public link | `false` |
 
-### Config File
+### Config File (Optional)
 
-Create `~/.config/arabic-video-translator/config.json`:
+No config needed — defaults work great. But if you want to customize, create `~/.config/video-translator/config.json`:
 
 ```json
 {
@@ -142,6 +142,50 @@ Create `~/.config/arabic-video-translator/config.json`:
   }
 }
 ```
+
+## 🎮 GPU Support
+
+GPU is **auto-detected** — no config needed for NVIDIA. AMD requires one extra step.
+
+### Which launcher to use?
+
+| Your GPU | Launcher | Notes |
+|----------|----------|-------|
+| **NVIDIA** (RTX 3060, 4070, etc.) | `start.sh` / `start.command` | Works automatically via CUDA |
+| **AMD** (RX 7900, 9070 XT, etc.) | `start-amd.sh` | Requires ROCm drivers on Linux |
+| **Intel Arc** | `start.sh` (CPU mode) | GPU not supported yet, uses CPU |
+| **Apple Silicon** (M1/M2/M3) | `start.command` | Uses MPS acceleration |
+| **No GPU / Integrated** | `start.sh` | Falls back to CPU (slower but works) |
+
+### GPU Memory Requirements
+
+| Model | Min VRAM | Recommended |
+|-------|----------|-------------|
+| `tiny` | 1 GB | Any GPU |
+| `base` | 1 GB | Any GPU |
+| `small` | 2 GB | GTX 1650+ / RX 580+ |
+| `medium` | 5 GB | RTX 3060 / RX 6700 XT |
+| `large-v3` | 10 GB | RTX 3080 / RX 6800 XT / **RX 9070 XT ✓** |
+
+### AMD GPU Setup (Linux only)
+
+1. Install [ROCm drivers](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/)
+2. Use `./start-amd.sh` instead of `./start.sh`
+
+> ⚠️ AMD GPUs only work on Linux with ROCm. On Windows, it falls back to CPU.
+
+### Speed Comparison (10-minute video)
+
+| Device | `medium` model | `large-v3` model |
+|--------|---------------|------------------|
+| RTX 4090 | ~2 min | ~4 min |
+| RTX 3080 / RX 6800 XT | ~5 min | ~10 min |
+| **RX 9070 XT** | ~4 min | ~8 min |
+| RTX 3060 / RX 6700 XT | ~8 min | ~15 min |
+| Apple M2 Pro | ~10 min | ~20 min |
+| CPU only (8-core) | ~30 min | ~60 min |
+
+---
 
 ## 🔧 Model Options
 

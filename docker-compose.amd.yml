@@ -1,0 +1,21 @@
+# AMD GPU Support (ROCm)
+#
+# For AMD GPUs like RX 6000/7000/9000 series
+# Usage: docker compose -f docker-compose.yml -f docker-compose.amd.yml up
+#
+# Requires: ROCm drivers installed on host
+# See: https://rocm.docs.amd.com/projects/install-on-linux/en/latest/
+
+services:
+  translator:
+    image: rocm/pytorch:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.amd
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0  # For RDNA3/RDNA4 GPUs
