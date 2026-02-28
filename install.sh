@@ -84,8 +84,8 @@ case $GPU_TYPE in
         ;;
     nvidia)
         echo "→ Building for NVIDIA GPU (CUDA)..."
-        docker compose build
-        COMPOSE_CMD="docker compose"
+        docker compose -f docker-compose.yml -f docker-compose.nvidia.yml build
+        COMPOSE_CMD="docker compose -f docker-compose.yml -f docker-compose.nvidia.yml"
         ;;
     apple)
         echo "→ Building for Apple Silicon (MPS)..."
