@@ -12,9 +12,11 @@ if ! command -v docker &> /dev/null; then
     echo "❌ Docker not found!"
     echo ""
     echo "Please install Docker first:"
-    echo "  Mac:   https://docs.docker.com/desktop/install/mac-install/"
-    echo "  Linux: https://docs.docker.com/engine/install/"
-    echo ""
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "  https://docs.docker.com/desktop/install/mac-install/"
+    else
+        echo "  https://docs.docker.com/engine/install/"
+    fi
     exit 1
 fi
 
@@ -29,15 +31,16 @@ if ! docker info &> /dev/null; then
         done
     else
         sudo systemctl start docker
+        sleep 2
         if ! docker info &> /dev/null; then
-            echo "❌ Failed to start Docker. Try: sudo systemctl start docker"
+            echo "❌ Failed to start Docker."
             exit 1
         fi
     fi
     echo "✓ Docker started"
 fi
 
-echo "✓ Docker found"
+echo "✓ Docker running"
 
 # Clone or update
 INSTALL_DIR="$HOME/video-translator"
@@ -45,40 +48,94 @@ INSTALL_DIR="$HOME/video-translator"
 if [ -d "$INSTALL_DIR" ]; then
     echo "→ Updating existing installation..."
     cd "$INSTALL_DIR"
-    git pull
+    git pull --quiet
 else
     echo "→ Downloading..."
-    git clone https://github.com/mazbouhali/video-translator.git "$INSTALL_DIR"
+    git clone --quiet https://github.com/mazbouhali/video-translator.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 
-# Clean up files for other operating systems
+# Detect GPU
+GPU_TYPE="cpu"
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "→ Cleaning up Windows/Linux files..."
-    rm -f start.bat stop.bat install.ps1 start.sh stop.sh start-amd.sh VideoTranslator.desktop 2>/dev/null
+    # Mac - check for Apple Silicon
+    if sysctl -n machdep.cpu.brand_string 2>/dev/null | grep -q "Apple"; then
+        GPU_TYPE="apple"
+    fi
 else
-    echo "→ Cleaning up Windows/Mac files..."
-    rm -f start.bat stop.bat install.ps1 start.command stop.command 2>/dev/null
+    # Linux - check lspci
+    if command -v lspci &> /dev/null; then
+        if lspci | grep -iE "vga|3d|display" | grep -iq "amd\|radeon"; then
+            GPU_TYPE="amd"
+        elif lspci | grep -iE "vga|3d|display" | grep -iq "nvidia"; then
+            GPU_TYPE="nvidia"
+        fi
+    fi
 fi
 
-# Detect GPU type and build appropriate image
-if lspci 2>/dev/null | grep -i "vga\|3d" | grep -iq "amd\|radeon"; then
-    echo "→ AMD GPU detected — building ROCm version..."
-    docker compose -f docker-compose.yml -f docker-compose.amd.yml build
-    # Set AMD as default for start.sh
-    echo '#!/bin/bash
-cd "$(dirname "$0")"
-docker compose -f docker-compose.yml -f docker-compose.amd.yml up -d
-sleep 2
-xdg-open http://localhost:7860 2>/dev/null || echo "Open http://localhost:7860"
-echo "✓ Video Translator running (AMD GPU) at http://localhost:7860"' > start.sh
-    chmod +x start.sh
-elif lspci 2>/dev/null | grep -i "vga\|3d" | grep -iq "nvidia"; then
-    echo "→ NVIDIA GPU detected — building CUDA version..."
-    docker compose build
+echo "→ Detected: $GPU_TYPE"
+
+# Build appropriate image
+case $GPU_TYPE in
+    amd)
+        echo "→ Building for AMD GPU (ROCm)..."
+        docker compose -f docker-compose.yml -f docker-compose.amd.yml build
+        COMPOSE_CMD="docker compose -f docker-compose.yml -f docker-compose.amd.yml"
+        ;;
+    nvidia)
+        echo "→ Building for NVIDIA GPU (CUDA)..."
+        docker compose build
+        COMPOSE_CMD="docker compose"
+        ;;
+    apple)
+        echo "→ Building for Apple Silicon (MPS)..."
+        docker compose build
+        COMPOSE_CMD="docker compose"
+        ;;
+    *)
+        echo "→ Building for CPU..."
+        docker compose build
+        COMPOSE_CMD="docker compose"
+        ;;
+esac
+
+# Create start script for this OS
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # Mac - keep start.command, remove others
+    rm -f start.sh stop.sh start-amd.sh start.bat stop.bat install.ps1 VideoTranslator.desktop 2>/dev/null
 else
-    echo "→ No dedicated GPU detected — building CPU version..."
-    docker compose build
+    # Linux - create proper start.sh
+    rm -f start.command stop.command start.bat stop.bat install.ps1 2>/dev/null
+    
+    cat > start.sh << EOF
+#!/bin/bash
+cd "\$(dirname "\$0")"
+$COMPOSE_CMD up -d
+sleep 3
+echo "✓ Video Translator running at http://localhost:7860"
+xdg-open http://localhost:7860 2>/dev/null || echo "Open http://localhost:7860 in your browser"
+EOF
+    chmod +x start.sh
+    
+    cat > stop.sh << EOF
+#!/bin/bash
+cd "\$(dirname "\$0")"
+$COMPOSE_CMD down
+echo "✓ Stopped"
+EOF
+    chmod +x stop.sh
+
+    # Create .desktop file for app menu
+    cat > "$HOME/.local/share/applications/video-translator.desktop" << EOF
+[Desktop Entry]
+Name=Video Translator
+Comment=Translate Arabic videos to English
+Exec=bash -c 'cd $INSTALL_DIR && ./start.sh'
+Icon=video-x-generic
+Terminal=true
+Type=Application
+Categories=AudioVideo;Video;
+EOF
 fi
 
 echo ""
@@ -88,11 +145,12 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "📁 Installed to: $INSTALL_DIR"
 echo ""
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "To start: Double-click start.command"
+    echo "To start: Double-click start.command in Finder"
 else
     echo "To start:"
-    echo "  cd $INSTALL_DIR"
-    echo "  ./start.sh"
+    echo "  cd $INSTALL_DIR && ./start.sh"
+    echo ""
+    echo "Or find 'Video Translator' in your app menu"
 fi
 echo ""
 echo "Opens at: http://localhost:7860"
