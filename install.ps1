@@ -51,24 +51,8 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host "📁 Installed to: $InstallDir"
 Write-Host ""
 Write-Host "To start:"
-Write-Host "  cd $InstallDir"
-Write-Host "  docker compose up"
+Write-Host "  • Double-click start.bat"
+Write-Host "  • Or: cd $InstallDir; docker compose up"
 Write-Host ""
-Write-Host "Then open: http://localhost:7860"
+Write-Host "Opens at: http://localhost:7860"
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-Write-Host ""
-
-$response = Read-Host "Start now? [Y/n]"
-if ($response -ne "n" -and $response -ne "N") {
-    Write-Host "→ Starting web UI..."
-    docker compose up -d
-    Start-Sleep -Seconds 3
-    
-    # Open browser
-    Start-Process "http://localhost:7860"
-    
-    Write-Host ""
-    Write-Host "🎬 Video Translator is running!" -ForegroundColor Green
-    Write-Host "   Open: http://localhost:7860"
-    Write-Host "   Stop: cd $InstallDir; docker compose down"
-}

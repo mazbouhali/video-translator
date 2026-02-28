@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/mazbouhali/video-translator/main/in
 irm https://raw.githubusercontent.com/mazbouhali/video-translator/main/install.ps1 | iex
 ```
 
-The script will ask to start automatically and open **http://localhost:7860** in your browser.
+After install, double-click **start.command** (Mac) or **start.bat** (Windows) to launch.
 
 ---
 

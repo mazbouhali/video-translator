@@ -49,31 +49,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "📁 Installed to: $INSTALL_DIR"
 echo ""
 echo "To start:"
-echo "  cd $INSTALL_DIR"
-echo "  docker compose up"
+echo "  • Mac: Double-click start.command"
+echo "  • Linux: ./start.command"
+echo "  • Or: cd $INSTALL_DIR && docker compose up"
 echo ""
-echo "Then open: http://localhost:7860"
+echo "Opens at: http://localhost:7860"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-# Ask to start now
-read -p "Start now? [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    echo "→ Starting web UI..."
-    docker compose up -d
-    sleep 3
-    
-    # Open browser
-    URL="http://localhost:7860"
-    if command -v open &> /dev/null; then
-        open "$URL"  # macOS
-    elif command -v xdg-open &> /dev/null; then
-        xdg-open "$URL"  # Linux
-    fi
-    
-    echo ""
-    echo "🎬 Video Translator is running!"
-    echo "   Open: $URL"
-    echo "   Stop: cd $INSTALL_DIR && docker compose down"
-fi
