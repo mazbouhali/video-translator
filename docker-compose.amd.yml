@@ -2,20 +2,27 @@
 #
 # For AMD GPUs like RX 6000/7000/9000 series
 # Usage: docker compose -f docker-compose.yml -f docker-compose.amd.yml up
-#
-# Requires: ROCm drivers installed on host
-# See: https://rocm.docs.amd.com/projects/install-on-linux/en/latest/
 
 services:
   translator:
-    image: rocm/pytorch:latest
     build:
       context: .
       dockerfile: Dockerfile.amd
+    
+    # Remove NVIDIA config, add AMD
+    deploy: {}
+    
     devices:
       - /dev/kfd
       - /dev/dri
+    
     group_add:
       - video
+    
     environment:
-      - HSA_OVERRIDE_GFX_VERSION=11.0.0  # For RDNA3/RDNA4 GPUs
+      - SOURCE_LANG=ar
+      - TARGET_LANG=en
+      - WHISPER_MODEL=medium
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0
