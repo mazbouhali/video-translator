@@ -41,6 +41,9 @@ if (Test-Path $InstallDir) {
     Set-Location $InstallDir
 }
 
+Write-Host "→ Cleaning up Linux/Mac files..."
+Remove-Item -Force start.sh, stop.sh, start.command, stop.command, start-amd.sh, install.sh, VideoTranslator.desktop -ErrorAction SilentlyContinue
+
 Write-Host "→ Building (this may take a few minutes on first run)..."
 docker compose build
 

@@ -39,6 +39,15 @@ else
     cd "$INSTALL_DIR"
 fi
 
+# Clean up files for other operating systems
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "→ Cleaning up Windows/Linux files..."
+    rm -f start.bat stop.bat install.ps1 start.sh stop.sh start-amd.sh VideoTranslator.desktop 2>/dev/null
+else
+    echo "→ Cleaning up Windows/Mac files..."
+    rm -f start.bat stop.bat install.ps1 start.command stop.command 2>/dev/null
+fi
+
 echo "→ Building (this may take a few minutes on first run)..."
 docker compose build
 
