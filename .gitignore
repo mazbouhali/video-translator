@@ -1,31 +1,30 @@
-# Video/Audio files (users provide their own)
-input/*.mp4
-input/*.mkv
-input/*.avi
-input/*.mov
-input/*.webm
-output/*
-temp/*
-
-# Keep directory structure
-!input/.gitkeep
-!output/.gitkeep
-!models/.gitkeep
-
-# Downloaded models (large, re-downloadable)
-models/*
-!models/.gitkeep
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-.env
-.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
 venv/
 ENV/
+env/
+.venv/
 
 # IDE
 .idea/
@@ -34,10 +33,52 @@ ENV/
 *.swo
 *~
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter
+.ipynb_checkpoints/
+
 # OS
 .DS_Store
 Thumbs.db
 
+# Project specific
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+*.wav
+*.mp3
+*.srt
+*.ass
+
+# Model caches (large files)
+models/
+*.pt
+*.bin
+*.safetensors
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
 # Logs
 *.log
-!temp/.gitkeep
+logs/
+
+# Config with secrets
+config.local.json
+.env
+.env.local

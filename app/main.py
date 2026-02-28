@@ -1,147 +1,189 @@
 #!/usr/bin/env python3
 """
-Arabic Video Translator CLI
+Arabic Video Translator - Command Line Interface
 
-Translates Arabic speech in videos to English subtitles.
+Translates Arabic speech in videos to English subtitles using:
+- Whisper for speech recognition
+- NLLB/MarianMT for translation
+- ffmpeg for video processing
 
 Usage:
-    python -m app.main input_video.mp4 -o output_video.mp4
-    python -m app.main input_video.mp4 --burn-in
-    python -m app.main input_video.mp4 --srt-only
+    python -m app.main video.mp4
+    python -m app.main video.mp4 --burn-in
+    python -m app.main video.mp4 --srt-only
+    python -m app.main video.mp4 -o output.mp4 --keep-arabic
+
+For web interface, run:
+    python -m app.web
 """
 
 import argparse
 import sys
-import os
-from pathlib import Path
-from typing import Optional
 import time
+from pathlib import Path
+from typing import Optional, Dict, Any
 
-# Rich for beautiful progress output
+# Rich for progress display (graceful fallback if not installed)
 try:
     from rich.console import Console
     from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
     from rich.panel import Panel
-    from rich import print as rprint
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
-from .transcribe import transcribe_video
+from .config import get_config, Config
+from .transcribe import transcribe_video, check_ffmpeg
 from .translate import create_translator
-from .subtitles import write_srt, embed_subtitles, create_dual_subtitle_video
+from .subtitles import write_srt, embed_subtitles
 
 
-def create_console():
-    """Create console for output."""
-    if RICH_AVAILABLE:
-        return Console()
-    return None
-
-
-def print_status(message: str, console=None, style: str = ""):
-    """Print status message."""
-    if console and RICH_AVAILABLE:
-        console.print(f"[{style}]{message}[/{style}]" if style else message)
-    else:
-        print(message)
-
-
-def print_header(console=None):
-    """Print application header."""
-    header = """
-╔═══════════════════════════════════════════════════════════╗
-║           🎬 Arabic Video Translator 🎬                   ║
-║        Arabic Speech → English Subtitles                  ║
-╚═══════════════════════════════════════════════════════════╝
-    """
-    if console and RICH_AVAILABLE:
-        console.print(Panel.fit(
-            "[bold blue]Arabic Video Translator[/bold blue]\n"
-            "[dim]Arabic Speech → English Subtitles[/dim]",
-            border_style="blue"
-        ))
-    else:
-        print(header)
+class ProgressReporter:
+    """Handles progress reporting with optional Rich support."""
+    
+    def __init__(self, quiet: bool = False):
+        self.quiet = quiet
+        self.console = Console() if RICH_AVAILABLE and not quiet else None
+    
+    def print(self, message: str, style: str = "") -> None:
+        """Print a message with optional styling."""
+        if self.quiet:
+            return
+        
+        if self.console and style:
+            self.console.print(f"[{style}]{message}[/{style}]")
+        elif self.console:
+            self.console.print(message)
+        else:
+            print(message)
+    
+    def header(self) -> None:
+        """Print application header."""
+        if self.quiet:
+            return
+        
+        if self.console:
+            self.console.print(Panel.fit(
+                "[bold blue]🎬 Arabic Video Translator[/bold blue]\n"
+                "[dim]Arabic Speech → English Subtitles[/dim]",
+                border_style="blue"
+            ))
+        else:
+            print("\n" + "=" * 50)
+            print("  🎬 Arabic Video Translator")
+            print("  Arabic Speech → English Subtitles")
+            print("=" * 50 + "\n")
+    
+    def step(self, message: str) -> None:
+        """Print a step/progress message."""
+        self.print(f"  → {message}", "cyan")
+    
+    def success(self, message: str) -> None:
+        """Print a success message."""
+        self.print(f"  ✓ {message}", "green")
+    
+    def error(self, message: str) -> None:
+        """Print an error message."""
+        self.print(f"  ✗ {message}", "bold red")
+    
+    def section(self, title: str) -> None:
+        """Print a section header."""
+        self.print(f"\n{title}", "bold yellow")
 
 
 def process_video(
     input_path: str,
     output_path: Optional[str] = None,
-    whisper_model: str = "large-v3",
-    translation_model: str = "nllb",
+    whisper_model: Optional[str] = None,
+    translation_model: Optional[str] = None,
     burn_in: bool = False,
     srt_only: bool = False,
     keep_arabic: bool = False,
     device: Optional[str] = None,
-    console=None,
-) -> dict:
+    reporter: Optional[ProgressReporter] = None,
+) -> Dict[str, Any]:
     """
-    Process a video: transcribe, translate, and add subtitles.
+    Process a video: transcribe Arabic, translate to English, add subtitles.
     
     Args:
-        input_path: Path to input video
+        input_path: Path to input video file
         output_path: Path for output (auto-generated if None)
         whisper_model: Whisper model for transcription
         translation_model: Translation model name
-        burn_in: Burn subtitles into video
+        burn_in: Burn subtitles into video (permanent)
         srt_only: Only generate SRT file, no video output
-        keep_arabic: Keep Arabic SRT alongside English
-        device: Device for inference
-        console: Rich console for output
+        keep_arabic: Also save Arabic transcription as SRT
+        device: Device for inference (cuda/mps/cpu/auto)
+        reporter: Progress reporter instance
         
     Returns:
         Dict with paths to generated files
+        
+    Raises:
+        FileNotFoundError: If input video doesn't exist
+        RuntimeError: If processing fails
     """
-    input_path = Path(input_path).expanduser().resolve()
+    if reporter is None:
+        reporter = ProgressReporter(quiet=True)
     
+    # Validate input
+    input_path = Path(input_path).expanduser().resolve()
     if not input_path.exists():
         raise FileNotFoundError(f"Input video not found: {input_path}")
+    
+    # Check ffmpeg
+    if not check_ffmpeg():
+        raise RuntimeError(
+            "ffmpeg is required but not found. Install it:\n"
+            "  macOS: brew install ffmpeg\n"
+            "  Ubuntu: sudo apt install ffmpeg\n"
+            "  Windows: choco install ffmpeg"
+        )
+    
+    # Load config
+    config = get_config()
     
     # Generate output paths
     if output_path:
         output_path = Path(output_path).expanduser().resolve()
     else:
         suffix = "_translated" if not srt_only else ""
-        output_path = input_path.parent / f"{input_path.stem}{suffix}{input_path.suffix}"
+        output_dir = Path(config.output_dir) if config.output_dir else input_path.parent
+        output_path = output_dir / f"{input_path.stem}{suffix}{input_path.suffix}"
     
     srt_path = output_path.parent / f"{output_path.stem}.srt"
     arabic_srt_path = output_path.parent / f"{output_path.stem}_arabic.srt"
     
     results = {"input": str(input_path)}
     
-    # Progress callback
-    def progress(msg):
-        print_status(f"  → {msg}", console, "cyan")
-    
-    # Step 1: Transcribe
-    print_status("\n📝 Step 1/3: Transcribing Arabic speech...", console, "bold yellow")
+    # === Step 1: Transcription ===
+    reporter.section("📝 Step 1/3: Transcribing Arabic speech...")
     start_time = time.time()
     
     transcription = transcribe_video(
         str(input_path),
         model_name=whisper_model,
         device=device,
-        progress_callback=progress
+        progress_callback=reporter.step
     )
     
-    transcribe_time = time.time() - start_time
-    print_status(f"  ✓ Transcribed {len(transcription['segments'])} segments in {transcribe_time:.1f}s", console, "green")
+    elapsed = time.time() - start_time
+    reporter.success(f"Transcribed {len(transcription['segments'])} segments in {elapsed:.1f}s")
     
     # Save Arabic SRT if requested
     if keep_arabic:
         write_srt(transcription["segments"], str(arabic_srt_path))
         results["arabic_srt"] = str(arabic_srt_path)
-        print_status(f"  ✓ Saved Arabic subtitles: {arabic_srt_path.name}", console, "green")
+        reporter.success(f"Saved Arabic subtitles: {arabic_srt_path.name}")
     
-    # Step 2: Translate
-    print_status("\n🌐 Step 2/3: Translating to English...", console, "bold yellow")
+    # === Step 2: Translation ===
+    reporter.section("🌐 Step 2/3: Translating to English...")
     start_time = time.time()
     
     translator = create_translator(
         model=translation_model,
         device=device,
-        progress_callback=progress
+        progress_callback=reporter.step
     )
     
     translated_segments = translator.translate_segments(
@@ -149,40 +191,43 @@ def process_video(
         show_progress=True
     )
     
-    translate_time = time.time() - start_time
-    print_status(f"  ✓ Translated {len(translated_segments)} segments in {translate_time:.1f}s", console, "green")
+    elapsed = time.time() - start_time
+    reporter.success(f"Translated {len(translated_segments)} segments in {elapsed:.1f}s")
     
     # Write English SRT
     write_srt(translated_segments, str(srt_path))
     results["english_srt"] = str(srt_path)
-    print_status(f"  ✓ Saved English subtitles: {srt_path.name}", console, "green")
+    reporter.success(f"Saved English subtitles: {srt_path.name}")
     
-    # Step 3: Embed subtitles (unless SRT-only mode)
+    # === Step 3: Video embedding ===
     if not srt_only:
-        print_status("\n🎬 Step 3/3: Embedding subtitles into video...", console, "bold yellow")
+        reporter.section("🎬 Step 3/3: Embedding subtitles into video...")
         start_time = time.time()
-        
-        mode = "burning in" if burn_in else "embedding as soft subs"
-        progress(f"Processing video ({mode})...")
         
         output_video = embed_subtitles(
             str(input_path),
             str(srt_path),
             str(output_path),
-            burn_in=burn_in
+            burn_in=burn_in,
+            progress_callback=reporter.step
         )
         
-        embed_time = time.time() - start_time
+        elapsed = time.time() - start_time
         results["video"] = output_video
-        print_status(f"  ✓ Created video in {embed_time:.1f}s: {output_path.name}", console, "green")
+        reporter.success(f"Created video in {elapsed:.1f}s: {output_path.name}")
     else:
-        print_status("\n⏭️  Step 3/3: Skipped (SRT-only mode)", console, "dim")
+        reporter.section("⏭️  Step 3/3: Skipped (SRT-only mode)")
     
     return results
 
 
-def main():
-    """Main CLI entry point."""
+def main() -> int:
+    """
+    Main CLI entry point.
+    
+    Returns:
+        Exit code (0 for success, non-zero for errors)
+    """
     parser = argparse.ArgumentParser(
         description="Translate Arabic speech in videos to English subtitles",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -193,7 +238,15 @@ Examples:
   %(prog)s video.mp4 --burn-in            # Burn subtitles into video
   %(prog)s video.mp4 --srt-only           # Only generate SRT file
   %(prog)s video.mp4 --keep-arabic        # Also save Arabic transcript
-  %(prog)s video.mp4 --whisper-model base # Use smaller/faster model
+
+Environment Variables:
+  AVT_WHISPER_MODEL    Whisper model (default: large-v3)
+  AVT_TRANSLATION_MODEL Translation model (default: nllb)
+  AVT_DEVICE           Compute device (cuda/mps/cpu)
+  AVT_OUTPUT_DIR       Default output directory
+
+Web Interface:
+  python -m app.web    # Launch Gradio web interface
         """
     )
     
@@ -204,7 +257,7 @@ Examples:
     
     parser.add_argument(
         "-o", "--output",
-        help="Output video file path (default: input_translated.ext)"
+        help="Output video file path (default: <input>_translated.<ext>)"
     )
     
     parser.add_argument(
@@ -222,19 +275,17 @@ Examples:
     parser.add_argument(
         "--keep-arabic",
         action="store_true",
-        help="Also save Arabic transcription as SRT"
+        help="Also save Arabic transcription as SRT file"
     )
     
     parser.add_argument(
         "--whisper-model",
-        default="large-v3",
         choices=["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
         help="Whisper model for transcription (default: large-v3)"
     )
     
     parser.add_argument(
         "--translation-model",
-        default="nllb",
         choices=["nllb", "nllb-large", "marian"],
         help="Translation model (default: nllb)"
     )
@@ -251,14 +302,17 @@ Examples:
         help="Suppress progress output"
     )
     
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="%(prog)s 1.0.0"
+    )
+    
     args = parser.parse_args()
     
-    # Setup console
-    console = None if args.quiet else create_console()
-    
-    # Print header
-    if not args.quiet:
-        print_header(console)
+    # Setup progress reporter
+    reporter = ProgressReporter(quiet=args.quiet)
+    reporter.header()
     
     try:
         results = process_video(
@@ -270,39 +324,39 @@ Examples:
             srt_only=args.srt_only,
             keep_arabic=args.keep_arabic,
             device=args.device,
-            console=console,
+            reporter=reporter,
         )
         
         # Print summary
         if not args.quiet:
-            print_status("\n" + "="*50, console)
-            print_status("✅ Processing complete!", console, "bold green")
-            print_status("", console)
-            print_status("Generated files:", console, "bold")
+            reporter.print("\n" + "=" * 50)
+            reporter.print("✅ Processing complete!", "bold green")
+            reporter.print("")
+            reporter.print("Generated files:", "bold")
             
             if "video" in results:
-                print_status(f"  📹 Video: {results['video']}", console)
+                reporter.print(f"  📹 Video: {results['video']}")
             if "english_srt" in results:
-                print_status(f"  📄 English SRT: {results['english_srt']}", console)
+                reporter.print(f"  📄 English SRT: {results['english_srt']}")
             if "arabic_srt" in results:
-                print_status(f"  📄 Arabic SRT: {results['arabic_srt']}", console)
+                reporter.print(f"  📄 Arabic SRT: {results['arabic_srt']}")
         
         return 0
         
     except FileNotFoundError as e:
-        print_status(f"\n❌ Error: {e}", console, "bold red")
+        reporter.error(str(e))
         return 1
     except RuntimeError as e:
-        print_status(f"\n❌ Error: {e}", console, "bold red")
+        reporter.error(str(e))
         return 1
     except KeyboardInterrupt:
-        print_status("\n\n⚠️  Interrupted by user", console, "yellow")
+        reporter.print("\n\n⚠️  Interrupted by user", "yellow")
         return 130
     except Exception as e:
-        print_status(f"\n❌ Unexpected error: {e}", console, "bold red")
-        if console and RICH_AVAILABLE:
-            console.print_exception()
-        raise
+        reporter.error(f"Unexpected error: {e}")
+        if RICH_AVAILABLE and reporter.console:
+            reporter.console.print_exception()
+        return 1
 
 
 if __name__ == "__main__":

@@ -1,131 +1,196 @@
-# 🎬 Arabic Video Translator
+# 🎬 Video Translator
 
-Translate Arabic videos to English automatically. No API keys, no cloud services — everything runs locally on your machine.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-**What it does:** Arabic audio → English subtitles (burned into video + separate SRT files)
+Automatically translate foreign language speech in videos to English subtitles using state-of-the-art AI models.
 
-**Dialect support:** Works with Modern Standard Arabic (MSA) and regional dialects including **Lebanese**, Syrian, Egyptian, Gulf, and Maghrebi Arabic. Optimized for Levantine dialects.
+## 🌍 Supported Languages
 
-## Quick Start
+| Language | Dialects | Status |
+|----------|----------|--------|
+| **Arabic** | MSA, Lebanese, Syrian, Egyptian, Gulf, Maghrebi | ✅ Full support |
+| **Farsi/Persian** | Iranian, Dari, Tajik | 🔜 Coming soon |
+| **100+ others** | Via Whisper | ✅ Works out of the box |
+
+*Optimized for Levantine Arabic (Lebanese, Syrian) dialects.*
+
+## ✨ Features
+
+- **🎙️ Accurate Transcription** - OpenAI Whisper (large-v3) for Arabic speech recognition
+- **🌐 Quality Translation** - Meta's NLLB-200 for Arabic→English translation  
+- **📝 Subtitle Generation** - Creates properly-timed SRT files
+- **🎬 Video Output** - Embeds subtitles (soft or burned-in) via ffmpeg
+- **💻 CLI & Web UI** - Use command line or drag-and-drop browser interface
+- **⚡ GPU Accelerated** - CUDA, MPS (Apple Silicon), or CPU
+
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
-git clone https://github.com/youruser/arabic-video-translator
-cd arabic-video-translator
-docker compose up
+# Clone the repository
+git clone https://github.com/mazbouhali/video-translator.git
+cd video-translator
+
+# Install ffmpeg (required)
+brew install ffmpeg          # macOS
+sudo apt install ffmpeg       # Ubuntu/Debian
+choco install ffmpeg          # Windows
+
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate      # Linux/macOS
+# or: venv\Scripts\activate   # Windows
+
+# Install Python dependencies
+pip install -r requirements.txt
 ```
 
-That's it. Now:
-1. Drop video files into `input/` folder
-2. Wait for processing (watch the terminal)
-3. Get results in `output/` folder
+### Usage
 
-## Requirements
+#### Command Line
 
-- **Docker** — [Install Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- **~10GB disk space** — For ML models (downloaded automatically on first run)
-- **Optional:** NVIDIA GPU for 5-10x faster processing
+```bash
+# Basic usage - creates video with toggleable subtitles
+python -m app.main video.mp4
 
-Works on **Mac**, **Windows**, and **Linux**.
+# Burn subtitles into video (permanent)
+python -m app.main video.mp4 --burn-in
 
-## Output Files
+# Generate only SRT file (no video output)
+python -m app.main video.mp4 --srt-only
 
-For each input video, you get:
+# Keep Arabic transcript alongside English
+python -m app.main video.mp4 --keep-arabic
+
+# Specify output path
+python -m app.main video.mp4 -o translated_video.mp4
+```
+
+#### Web Interface
+
+```bash
+# Launch web UI (opens browser)
+python -m app.web
+
+# Create shareable public link
+python -m app.web --share
+
+# Custom port
+python -m app.web --port 8080
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AVT_WHISPER_MODEL` | Whisper model | `large-v3` |
+| `AVT_TRANSLATION_MODEL` | Translation model | `nllb` |
+| `AVT_DEVICE` | Compute device | auto-detect |
+| `AVT_OUTPUT_DIR` | Output directory | same as input |
+| `AVT_SERVER_PORT` | Web UI port | `7860` |
+| `AVT_SHARE` | Enable public link | `false` |
+
+### Config File
+
+Create `~/.config/arabic-video-translator/config.json`:
+
+```json
+{
+  "transcription": {
+    "model": "large-v3",
+    "language": "ar"
+  },
+  "translation": {
+    "model": "nllb",
+    "batch_size": 8
+  },
+  "subtitle": {
+    "font_size": 24,
+    "position": "bottom"
+  }
+}
+```
+
+## 🔧 Model Options
+
+### Transcription (Whisper)
+
+| Model | Size | Speed | Quality |
+|-------|------|-------|---------|
+| `tiny` | 75MB | ⚡⚡⚡⚡ | ⭐ |
+| `base` | 145MB | ⚡⚡⚡ | ⭐⭐ |
+| `small` | 488MB | ⚡⚡ | ⭐⭐⭐ |
+| `medium` | 1.5GB | ⚡ | ⭐⭐⭐⭐ |
+| `large-v3` | 3GB | 🐢 | ⭐⭐⭐⭐⭐ |
+
+### Translation
+
+| Model | Size | Speed | Quality |
+|-------|------|-------|---------|
+| `marian` | 300MB | ⚡⚡⚡ | ⭐⭐⭐ |
+| `nllb` | 1.2GB | ⚡⚡ | ⭐⭐⭐⭐ |
+| `nllb-large` | 2.5GB | ⚡ | ⭐⭐⭐⭐⭐ |
+
+## 📁 Output Files
 
 | File | Description |
 |------|-------------|
-| `video_translated.mp4` | Video with English subtitles burned in |
-| `video_english.srt` | English subtitles (standalone) |
-| `video_arabic.srt` | Original Arabic transcription |
+| `video_translated.mp4` | Video with English subtitles |
+| `video_translated.srt` | English subtitle file |
+| `video_translated_arabic.srt` | Arabic transcript (with `--keep-arabic`) |
 
-## Commands
+## 💡 Tips
 
-Using Make (recommended):
+- **First run** downloads models (~5GB total) - subsequent runs are faster
+- **GPU** significantly speeds up processing (10x or more)
+- For **long videos**, test with smaller models first (`base`, `small`)
+- **Burned-in** subtitles work everywhere; soft subs need player support
+- Use **SRT-only** mode for quick testing without video re-encoding
+
+## 🛠️ Development
+
 ```bash
-make build          # Build the Docker image
-make run            # Start in watch mode (background)
-make logs           # View processing logs
-make stop           # Stop the translator
-make translate VIDEO=path/to/video.mp4   # Translate single file
+# Run tests
+python -m pytest tests/
+
+# Type checking
+python -m mypy app/
+
+# Format code
+python -m black app/
 ```
 
-Using Docker Compose directly:
-```bash
-docker compose up -d          # Start (detached)
-docker compose logs -f        # View logs
-docker compose down           # Stop
-docker compose up --build     # Rebuild and start
-```
-
-## Configuration
-
-Edit these in `docker-compose.yml`:
-
-| Setting | Default | Options |
-|---------|---------|---------|
-| `WHISPER_MODEL` | `medium` | `tiny`, `base`, `small`, `medium`, `large` |
-| `SOURCE_LANG` | `ar` | Any [Whisper language code](https://github.com/openai/whisper#available-models-and-languages) |
-| `TARGET_LANG` | `en` | `en`, `es`, `fr`, `de`, etc. |
-
-### Model Size vs Speed
-
-| Model | Size | Speed | Quality | GPU Memory |
-|-------|------|-------|---------|------------|
-| `tiny` | 75 MB | ⚡⚡⚡⚡⚡ | ★☆☆☆☆ | ~1 GB |
-| `base` | 142 MB | ⚡⚡⚡⚡ | ★★☆☆☆ | ~1 GB |
-| `small` | 466 MB | ⚡⚡⚡ | ★★★☆☆ | ~2 GB |
-| `medium` | 1.5 GB | ⚡⚡ | ★★★★☆ | ~5 GB |
-| `large` | 2.9 GB | ⚡ | ★★★★★ | ~10 GB |
-
-**No GPU?** It still works, just slower. Use `small` or `base` model for reasonable speed.
-
-## GPU Acceleration (Optional)
-
-**NVIDIA GPU users:** Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html), then it just works.
-
-**Mac users:** GPU acceleration via MPS is automatic on Apple Silicon.
-
-**CPU-only mode:** Use the override file:
-```bash
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml up
-```
-
-## Troubleshooting
-
-**"It's stuck downloading"** — First run downloads ~1.5GB of models. Be patient.
-
-**"Out of memory"** — Use a smaller model: set `WHISPER_MODEL=small` in docker-compose.yml
-
-**"Subtitles look wrong"** — Arabic text issues? The SRT files should be correct; video burning may have font issues.
-
-**"No GPU detected"** — That's fine, it falls back to CPU. For GPU: install NVIDIA Container Toolkit.
-
-## How It Works
-
-1. **Extract audio** from video (FFmpeg)
-2. **Transcribe** Arabic speech to text (OpenAI Whisper)
-3. **Translate** Arabic text to English (Google Translate, offline-capable)
-4. **Generate subtitles** in SRT format
-5. **Burn subtitles** into video (FFmpeg)
-
-All processing happens locally. Your videos never leave your machine.
-
-## Project Structure
+## 📦 Project Structure
 
 ```
 arabic-video-translator/
-├── input/              # ⬇️ Drop videos here
-├── output/             # ⬆️ Get results here
-├── models/             # 🤖 Cached ML models
-├── docker-compose.yml  # ⚙️ Main config
-├── Dockerfile          # 🐳 Container definition
-├── main.py             # 🐍 Translation script
-└── Makefile            # 🛠️ Convenience commands
+├── app/
+│   ├── __init__.py      # Package exports
+│   ├── config.py        # Configuration management
+│   ├── transcribe.py    # Whisper transcription
+│   ├── translate.py     # NLLB/MarianMT translation
+│   ├── subtitles.py     # SRT generation & embedding
+│   ├── main.py          # CLI interface
+│   └── web.py           # Gradio web interface
+├── requirements.txt
+└── README.md
 ```
 
-## License
+## 🤝 Contributing
 
-MIT — Use it however you want.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
----
+## 📄 License
 
-**Questions?** Open an issue. **Like it?** Star the repo ⭐
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- [OpenAI Whisper](https://github.com/openai/whisper) - Speech recognition
+- [Meta NLLB](https://github.com/facebookresearch/fairseq/tree/nllb) - Translation
+- [Gradio](https://gradio.app/) - Web interface
+- [FFmpeg](https://ffmpeg.org/) - Video processing
