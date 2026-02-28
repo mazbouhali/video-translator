@@ -61,8 +61,25 @@ else
     rm -f start.bat stop.bat install.ps1 start.command stop.command 2>/dev/null
 fi
 
-echo "→ Building (this may take a few minutes on first run)..."
-docker compose build
+# Detect GPU type and build appropriate image
+if lspci 2>/dev/null | grep -i "vga\|3d" | grep -iq "amd\|radeon"; then
+    echo "→ AMD GPU detected — building ROCm version..."
+    docker compose -f docker-compose.yml -f docker-compose.amd.yml build
+    # Set AMD as default for start.sh
+    echo '#!/bin/bash
+cd "$(dirname "$0")"
+docker compose -f docker-compose.yml -f docker-compose.amd.yml up -d
+sleep 2
+xdg-open http://localhost:7860 2>/dev/null || echo "Open http://localhost:7860"
+echo "✓ Video Translator running (AMD GPU) at http://localhost:7860"' > start.sh
+    chmod +x start.sh
+elif lspci 2>/dev/null | grep -i "vga\|3d" | grep -iq "nvidia"; then
+    echo "→ NVIDIA GPU detected — building CUDA version..."
+    docker compose build
+else
+    echo "→ No dedicated GPU detected — building CPU version..."
+    docker compose build
+fi
 
 echo ""
 echo "✅ Installation complete!"
