@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Video Translator
+Comment=Translate Arabic videos to English
+Exec=bash -c 'cd ~/video-translator && ./start.sh'
+Icon=video
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;
