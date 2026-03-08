@@ -155,8 +155,10 @@ detect_gpu() {
         fi
     fi
     
-    echo "GPU_TYPE=$GPU_TYPE"
-    echo "GPU_NAME=$GPU_NAME"
+    echo "GPU_TYPE='$GPU_TYPE'"
+    echo "GPU_NAME='$GPU_NAME'"
+    echo "GPU_GEN='${GPU_GEN:-}'"
+    echo "GFX_VERSION='${GFX_VERSION:-}'"
 }
 
 eval "$(detect_gpu)"
