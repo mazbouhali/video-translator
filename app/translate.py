@@ -26,6 +26,7 @@ from transformers import (
 from tqdm import tqdm
 
 from .config import get_config
+from .glossary import fix_translation, apply_glossary_to_arabic
 
 
 @dataclass
@@ -226,9 +227,12 @@ class ArabicTranslator:
             
             translated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         
+        # Apply glossary fixes to improve translation quality
+        translated = fix_translation(translated.strip())
+        
         return TranslationResult(
             original=text,
-            translated=translated.strip(),
+            translated=translated,
             model_used=self.model_path
         )
     
