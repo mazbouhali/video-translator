@@ -462,11 +462,14 @@ def transcribe_arabic_faster(
         if not torch.cuda.is_available():
             # CPU or unsupported GPU - use float32
             compute_type = "float32"
+        elif hasattr(torch.version, 'hip') and torch.version.hip is not None:
+            # ROCm/HIP backend - float16 not reliably supported (especially RDNA 4)
+            compute_type = "float32"
         elif torch.cuda.is_available():
-            # Check if it's actually NVIDIA CUDA (not ROCm pretending to be CUDA)
+            # Double-check device name for AMD GPUs on older ROCm
             try:
                 device_name = torch.cuda.get_device_name(0).lower()
-                if "amd" in device_name or "radeon" in device_name:
+                if "amd" in device_name or "radeon" in device_name or "gfx" in device_name:
                     compute_type = "float32"
             except:
                 pass
