@@ -451,12 +451,28 @@ def transcribe_arabic_faster(
     if not audio_path.exists():
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
     
-    # Determine device
+    # Determine device and compute type
     if device is None:
         device = "auto"
     
+    # Auto-adjust compute_type for compatibility
+    # AMD ROCm and CPU don't support float16 efficiently
+    if compute_type == "float16":
+        import torch
+        if not torch.cuda.is_available():
+            # CPU or unsupported GPU - use float32
+            compute_type = "float32"
+        elif torch.cuda.is_available():
+            # Check if it's actually NVIDIA CUDA (not ROCm pretending to be CUDA)
+            try:
+                device_name = torch.cuda.get_device_name(0).lower()
+                if "amd" in device_name or "radeon" in device_name:
+                    compute_type = "float32"
+            except:
+                pass
+    
     if progress_callback:
-        progress_callback(f"Loading model: {model_name} (faster-whisper)")
+        progress_callback(f"Loading model: {model_name} (faster-whisper, {compute_type})")
     
     # Check if this is a standard model or HuggingFace model
     model_info = ARABIC_MODELS.get(model_name, {})
