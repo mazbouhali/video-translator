@@ -411,7 +411,7 @@ class LLMBackend(TranslationBackend):
 
 
 class TwoPassBackend(TranslationBackend):
-    """Two-pass translation: NLLB first, then LLM refinement."""
+    """Two-pass translation: NLLB first, then LLM refinement with glossary context."""
     
     def __init__(
         self,
@@ -432,10 +432,25 @@ class TwoPassBackend(TranslationBackend):
             progress_callback=progress_callback,
             **llm_kwargs
         )
+        
+        # Import glossary for term lookup
+        from .glossary import ARABIC_GLOSSARY, get_context_prompt
+        self._glossary = ARABIC_GLOSSARY
+        self._get_context = get_context_prompt
     
     def _log(self, message: str) -> None:
         if self.progress_callback:
             self.progress_callback(message)
+    
+    def _extract_glossary_hints(self, arabic_text: str, limit: int = 15) -> str:
+        """Extract relevant glossary terms that appear in the Arabic text."""
+        hints = []
+        for ar_term, en_trans in self._glossary.items():
+            if ar_term in arabic_text:
+                hints.append(f"• {ar_term} = {en_trans}")
+                if len(hints) >= limit:
+                    break
+        return "\n".join(hints) if hints else ""
     
     @property
     def name(self) -> str:
@@ -448,9 +463,31 @@ class TwoPassBackend(TranslationBackend):
         # First pass: NLLB
         nllb_translation = self.nllb.translate(text, domain)
         
-        # Second pass: LLM refinement
+        # Extract glossary hints for this specific text
+        glossary_hints = self._extract_glossary_hints(text)
+        context_note = self._get_context(domain)
+        
+        # Build enhanced system prompt
         system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
-        refine_prompt = f"""I have Arabic text and its machine translation. Please improve the translation.
+        if context_note:
+            system = f"{system}\n\nContext: {context_note}"
+        
+        # Second pass: LLM refinement with glossary
+        if glossary_hints:
+            refine_prompt = f"""I have Arabic text and a rough machine translation. Improve the translation using the glossary terms below.
+
+GLOSSARY (use these exact translations):
+{glossary_hints}
+
+Original Arabic:
+{text}
+
+Machine translation (has errors, do not trust):
+{nllb_translation}
+
+Provide a corrected, natural English translation using the glossary terms. Output ONLY the translation:"""
+        else:
+            refine_prompt = f"""I have Arabic text and its machine translation. Please improve the translation.
 
 Original Arabic:
 {text}
@@ -471,15 +508,37 @@ Provide an improved, natural English translation. Output ONLY the translation:""
         # First pass all texts through NLLB (batched)
         nllb_translations = self.nllb.translate_batch(texts, domain)
         
-        # Second pass: refine each with LLM
+        # Get domain context once
+        context_note = self._get_context(domain)
+        base_system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
+        if context_note:
+            base_system = f"{base_system}\n\nContext: {context_note}"
+        
+        # Second pass: refine each with LLM + glossary
         results = []
         for original, nllb_trans in zip(texts, nllb_translations):
             if not original or not original.strip():
                 results.append("")
                 continue
             
-            system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
-            refine_prompt = f"""I have Arabic text and its machine translation. Please improve the translation.
+            # Extract glossary hints for this specific line
+            glossary_hints = self._extract_glossary_hints(original)
+            
+            if glossary_hints:
+                refine_prompt = f"""I have Arabic text and a rough machine translation. Improve the translation using the glossary terms below.
+
+GLOSSARY (use these exact translations):
+{glossary_hints}
+
+Original Arabic:
+{original}
+
+Machine translation (has errors, do not trust):
+{nllb_trans}
+
+Provide a corrected, natural English translation using the glossary terms. Output ONLY the translation:"""
+            else:
+                refine_prompt = f"""I have Arabic text and its machine translation. Please improve the translation.
 
 Original Arabic:
 {original}
@@ -490,7 +549,7 @@ Machine translation (may have errors):
 Provide an improved, natural English translation. Output ONLY the translation:"""
             
             try:
-                refined = self.llm._call_llm(refine_prompt, system)
+                refined = self.llm._call_llm(refine_prompt, base_system)
                 results.append(refined)
             except Exception as e:
                 logger.warning(f"LLM refinement failed: {e}")
