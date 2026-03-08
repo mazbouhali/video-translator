@@ -1,75 +1,1924 @@
 """
-Arabic-English glossary for religious and cultural terms.
-Applied before/after neural translation to fix common errors.
+Comprehensive Arabic-English glossary for video translation.
+Optimized for: Religious nasheeds, political speeches, Shia/Sunni content,
+resistance movement rhetoric, and Arabic poetic structures.
+
+PRIORITY COVERAGE:
+1. Karbala/Ashura/Nasheed vocabulary (extensive)
+2. Political/Resistance movement terminology
+3. Arabic poetic/rhetorical devices
+4. Dialect variations
+5. Common Whisper/NLLB error corrections
 """
 
-# Common mistranslations and corrections
-ARABIC_GLOSSARY = {
-    # Religious figures and titles
-    "الكرار": "the Champion (Imam Ali)",
-    "الأكبر": "al-Akbar (Ali al-Akbar)",
-    "حسين": "Hussein",
-    "الحسين": "Hussein",
-    "العباس": "Abbas",
-    "زينب": "Zainab",
-    "المختار": "the Chosen One (Prophet Muhammad)",
-    "الرسول": "the Messenger",
-    "النبي": "the Prophet",
+import re
+from typing import Dict, List, Tuple, Optional
+
+# =============================================================================
+# SECTION 1: KARBALA & ASHURA - COMPREHENSIVE
+# =============================================================================
+
+KARBALA_ASHURA = {
+    # === The Event ===
+    "واقعة الطف": "Battle of Taff (Karbala)",
+    "ملحمة الطف": "Epic of Taff",
+    "معركة كربلاء": "Battle of Karbala",
+    "يوم الطف": "Day of Taff",
+    "أرض الطف": "Land of Taff",
+    "ثورة الحسين": "Hussein's Revolution",
+    "نهضة الحسين": "Hussein's Uprising",
+    "نهضة عاشوراء": "Ashura Uprising",
+    "العاشر من المحرم": "Tenth of Muharram",
+    "يوم عاشوراء": "Day of Ashura",
+    "ليلة العاشر": "Night of Ashura (eve)",
+    "تاسوعاء": "Tasu'a (9th of Muharram)",
+    "الأربعين": "Arba'een (40th day)",
+    "زيارة الأربعين": "Arba'een Pilgrimage",
+    "مسيرة الأربعين": "Arba'een March",
+    "شهر المحرم": "Month of Muharram",
+    "شهر صفر": "Month of Safar",
+    "العشرة الأولى": "First Ten Days (of Muharram)",
     
-    # Religious terms
-    "بسم الله": "In the name of Allah",
-    "الرحمن الرحيم": "the Most Gracious, the Most Merciful",
-    "سبحان الله": "Glory be to Allah",
-    "الله أكبر": "Allah is Greatest",
-    "كبر لله": "proclaimed Allah is Greatest",
-    "سور الحمد": "Surah Al-Fatiha",
+    # === Geography of Karbala ===
+    "أرض كربلاء": "Land of Karbala",
+    "صحراء كربلاء": "Desert of Karbala",
+    "رمال كربلاء": "Sands of Karbala",
+    "تراب كربلاء": "Soil of Karbala",
+    "نهر الفرات": "Euphrates River",
+    "الفرات": "the Euphrates",
+    "شط الفرات": "Banks of Euphrates",
+    "ماء الفرات": "Water of Euphrates",
+    "العلقمي": "Alqami (river branch)",
+    "نهر العلقمي": "Alqami River",
+    "المشرعة": "the water access point",
+    "شريعة الفرات": "banks of Euphrates",
+    "الغاضرية": "Ghadiriyya",
+    "نينوى": "Nineveh",
+    
+    # === The Camp ===
+    "المخيم": "the camp",
+    "مخيم الحسين": "Hussein's camp",
+    "الخيام": "the tents",
+    "الخيمة": "the tent",
+    "خيمة الحسين": "Hussein's tent",
+    "خيمة زينب": "Zainab's tent",
+    "خيمة العيال": "tent of the children",
+    "حرق الخيام": "burning of the tents",
+    "إحراق الخيام": "setting fire to the tents",
+    "النساء والأطفال": "women and children",
+    "الأيتام": "the orphans",
+    "يتامى كربلاء": "orphans of Karbala",
+    "أرامل كربلاء": "widows of Karbala",
+    "العيال": "the family/children",
+    "الحريم": "the women",
+    "السبايا": "the captive women",
+    "السبي": "the captives",
+    "قافلة السبايا": "caravan of captives",
+    "موكب السبايا": "procession of captives",
+    
+    # === Thirst & Water ===
+    "العطش": "thirst",
+    "عطش الأطفال": "thirst of the children",
+    "العطاشى": "the thirsty ones",
+    "ظمأ الحسين": "Hussein's thirst",
+    "الماء": "water",
+    "قربة الماء": "water skin",
+    "القربة": "water bag",
+    "ساقي العطاشى": "water-bearer of the thirsty",
+    "سقاية الماء": "bringing water",
+    "منع الماء": "blocking of water",
+    "حصار الماء": "water siege",
+    "حرمان الماء": "deprivation of water",
+    "شربة ماء": "sip of water",
+    "قطرة ماء": "drop of water",
+    "الظمأ": "extreme thirst",
+    "يا عطشاه": "O my thirst!",
+    "العطشان": "the thirsty one",
+    "أنا عطشان": "I am thirsty",
+    
+    # === Martyrdom Vocabulary ===
     "الشهادة": "martyrdom",
-    "الجهاد": "struggle",
+    "الشهيد": "martyr",
+    "الشهداء": "martyrs",
+    "شهداء كربلاء": "martyrs of Karbala",
+    "سيد الشهداء": "Master of Martyrs",
+    "أبو الشهداء": "Father of Martyrs",
+    "مصرع": "place of martyrdom/death",
+    "مصرع الحسين": "place of Hussein's martyrdom",
+    "الاستشهاد": "martyrdom (act of)",
+    "استشهد": "was martyred",
+    "نال الشهادة": "attained martyrdom",
+    "فاز بالشهادة": "won martyrdom",
+    "طلب الشهادة": "sought martyrdom",
+    "التضحية": "sacrifice",
+    "الفداء": "redemption/sacrifice",
+    "فدى": "sacrificed for",
+    "فداك روحي": "may my soul be sacrificed for you",
+    "الذبح": "slaughter",
+    "ذبح الحسين": "slaughter of Hussein",
+    "مذبوح": "slaughtered",
+    "ذبيح": "one who is slaughtered",
+    "ذبيح الله": "sacrifice of Allah",
+    "القتل": "killing",
+    "قتيل": "slain one",
+    "قتلى": "the slain",
+    "مقتل": "killing/martyrdom narrative",
+    "مقتل الحسين": "martyrdom of Hussein",
+    "السقوط": "falling (in battle)",
+    "سقط شهيداً": "fell as a martyr",
+    "الدماء": "blood",
+    "دم الحسين": "blood of Hussein",
+    "الدم الزكي": "pure blood",
+    "الدماء الطاهرة": "pure/sacred blood",
+    "نزف": "bleeding",
+    "ينزف": "is bleeding",
+    "الجراح": "wounds",
+    "الجراحات": "injuries",
+    "مثخن بالجراح": "covered with wounds",
+    "طعنة": "stab wound",
+    "ضربة": "strike/blow",
+    "السهام": "arrows",
+    "السهم": "arrow",
+    "الرماح": "spears",
+    "الرمح": "spear",
+    "السيوف": "swords",
+    "السيف": "sword",
+    "النصل": "blade",
+    "ذو الفقار": "Dhulfiqar (Ali's sword)",
+    "الخنجر": "dagger",
+    "قطع الرأس": "beheading",
+    "الرأس الشريف": "noble head",
+    "رأس الحسين": "head of Hussein",
+    "الرؤوس على الرماح": "heads on spears",
+    "الجسد المقطع": "dismembered body",
+    "جثمان": "body/corpse",
+    "جثث الشهداء": "bodies of martyrs",
+    "البدن": "body",
+    "الأشلاء": "remains/body parts",
     
-    # Battle/Karbala terms
-    "كربلاء": "Karbala",
-    "الطف": "Taff (Karbala)",
-    "الثار": "vengeance/retribution",
+    # === Revenge & Justice ===
+    "الثأر": "revenge/blood-vengeance",
+    "ثار الله": "blood-vengeance of Allah",
+    "الطالب بالثأر": "seeker of revenge",
+    "يا لثارات الحسين": "O avengers of Hussein!",
+    "القصاص": "retribution",
+    "الانتقام": "vengeance",
+    "يوم الانتقام": "day of vengeance",
+    "العدالة": "justice",
+    "الظلم": "oppression",
+    "المظلوم": "the oppressed",
+    "المظلومين": "the oppressed ones",
+    "ظلم الحسين": "oppression of Hussein",
+    "الطغيان": "tyranny",
+    "الطاغية": "tyrant",
+    "الطواغيت": "tyrants",
+    "الجور": "injustice",
+    "الباغي": "aggressor",
+    "البغاة": "aggressors",
+    "الظالم": "oppressor",
+    "الظالمين": "oppressors",
+    "ظلمة بني أمية": "oppressors of Banu Umayya",
+    "لعنة الله": "curse of Allah",
+    "اللعنة": "curse",
+    "ملعون": "cursed",
+    
+    # === Battle Terms ===
+    "المعركة": "battle",
     "الميدان": "battlefield",
-    "الفرات": "Euphrates",
+    "ساحة المعركة": "battlefield",
+    "البراز": "single combat",
+    "المبارزة": "duel",
+    "النزال": "combat",
+    "هل من مبارز": "Is there any challenger?",
+    "الكر والفر": "attack and retreat",
+    "الهجوم": "attack",
+    "هجم": "attacked",
+    "انقض": "pounced",
+    "برز": "came forth",
+    "خرج": "went out",
+    "زحف": "advanced",
+    "الحملة": "charge",
+    "حمل على": "charged at",
+    "صال وجال": "fought valiantly",
+    "قاتل": "fought",
+    "المقاتل": "fighter",
+    "المقاتلون": "fighters",
+    "الجند": "soldiers",
+    "الجيش": "army",
+    "جيش الكوفة": "army of Kufa",
+    "جيش يزيد": "army of Yazid",
+    "جيش ابن زياد": "army of Ibn Ziyad",
+    "الحشود": "crowds/troops",
+    "ثلاثون ألفاً": "thirty thousand",
+    "اثنان وسبعون": "seventy-two",
+    "الفارس": "horseman/knight",
+    "الفرسان": "horsemen",
+    "الراجل": "foot soldier",
+    "المشاة": "infantry",
+    "الخيل": "horses",
+    "الجواد": "steed",
+    "الفحل": "stallion",
+    "صهيل": "neighing",
+    "صهيل الخيل": "neighing of horses",
     
-    # Common words often mistranslated
-    "فتى": "young warrior",
-    "فتاين": "young warriors",
-    "شبل": "lion cub",
-    "زمجر": "roared",
-    "عزف": "played (music)",
-    "مقام": "melody/station",
-    "النصر": "victory",
-    "صاح": "shouted",
+    # === Heroes & Titles ===
+    "البطل": "hero",
+    "الأبطال": "heroes",
+    "بطل كربلاء": "Hero of Karbala",
+    "الشجاع": "brave one",
+    "الشجاعة": "bravery",
+    "الفتى": "young warrior/youth",
+    "الفتيان": "young warriors",
+    "فتى الفتيان": "champion of champions",
+    "الحر": "the free one",
+    "الأحرار": "the free ones",
+    "الغيور": "zealous one",
+    "الغيرة": "zeal/honor",
+    "الحامي": "protector",
+    "حامي الحرم": "protector of the sanctuary",
+    "حامي الدين": "protector of faith",
+    "المدافع": "defender",
+    "المناضل": "struggler",
+    "الصامد": "steadfast one",
+    "الصمود": "steadfastness",
+    "الثابت": "firm one",
+    "الثبات": "firmness",
+    "الوفي": "loyal one",
+    "الوفاء": "loyalty",
+    "الإخلاص": "devotion",
+    "المخلص": "devoted one",
+    
+    # === Mourning & Lamentation ===
+    "العزاء": "mourning/condolence",
+    "مجلس العزاء": "mourning gathering",
+    "التعزية": "condolence",
+    "المأتم": "mourning assembly",
+    "الحسينية": "Hussainiyya (mourning hall)",
+    "البكاء": "weeping",
+    "الدموع": "tears",
+    "الدمعة": "tear",
+    "سكب الدموع": "shedding tears",
+    "ذرف الدموع": "flowing of tears",
+    "العبرة": "tear",
+    "العبرات": "tears",
+    "النحيب": "wailing",
+    "الندب": "lamentation",
+    "الندبة": "elegy",
+    "الرثاء": "elegy/mourning poetry",
+    "المرثية": "elegy",
+    "النوح": "wailing",
+    "النائحة": "mourning woman",
+    "النوائح": "mourning women",
+    "الصياح": "crying out",
+    "الصرخة": "scream",
+    "صرخة يا حسين": "cry of 'Ya Hussein!'",
+    "الأنين": "groaning",
+    "التأوه": "sighing",
+    "الحزن": "grief",
+    "حزن فاطمة": "grief of Fatimah",
+    "الأسى": "sorrow",
+    "الألم": "pain",
+    "الفجيعة": "tragedy",
+    "المصيبة": "calamity",
+    "مصيبة الحسين": "calamity of Hussein",
+    "المحنة": "tribulation",
+    "الكارثة": "catastrophe",
+    "الفاجعة": "disaster",
+    "التراجيديا": "tragedy",
+    
+    # === Ritual Terms ===
+    "اللطم": "chest-beating (latm)",
+    "اللطمية": "latmiyya (mourning chant)",
+    "التطبير": "tatbir (ritual)",
+    "المواكب": "processions",
+    "الموكب": "procession",
+    "موكب العزاء": "mourning procession",
+    "الزنجيل": "chains (for mourning)",
+    "التشابيه": "passion play (ta'ziyeh)",
+    "تمثيل واقعة كربلاء": "reenactment of Karbala",
+    "القراءة": "recitation",
+    "قراءة المقتل": "recitation of martyrdom narrative",
+    "القارئ": "reciter",
+    "الخطيب": "preacher/orator",
+    "المنبر": "pulpit",
+    "على المنبر": "on the pulpit",
+    "الرادود": "radood (lead mourning singer)",
+    "المنشد": "nasheed singer",
+    "الناعي": "elegist",
+    "الزيارة": "visitation/pilgrimage",
+    "زيارة الحسين": "visiting Hussein's shrine",
+    "الزوار": "visitors/pilgrims",
+    "زوار الحسين": "visitors of Hussein",
+    "التربة": "clay tablet (turbah)",
+    "تربة كربلاء": "clay of Karbala",
+    "السجود على التربة": "prostrating on turbah",
+    
+    # === Common Nasheed Phrases ===
+    "يا حسين": "O Hussein!",
+    "يا أبا عبد الله": "O Abu Abdullah!",
+    "يا سيدي الحسين": "O my master Hussein!",
+    "يا ثار الله": "O blood-vengeance of Allah!",
+    "يا مظلوم": "O oppressed one!",
+    "يا غريب": "O stranger!",
+    "يا شهيد": "O martyr!",
+    "يا ابن الزهراء": "O son of Zahra!",
+    "يا ابن علي": "O son of Ali!",
+    "يا ابن فاطمة": "O son of Fatimah!",
+    "حسين مني وأنا من حسين": "Hussein is from me and I am from Hussein",
+    "لبيك يا حسين": "At your service, O Hussein!",
+    "السلام عليك يا أبا عبد الله": "Peace be upon you, O Abu Abdullah",
+    "السلام على الحسين": "Peace upon Hussein",
+    "وعلى علي بن الحسين": "and upon Ali ibn Hussein",
+    "وعلى أولاد الحسين": "and upon the children of Hussein",
+    "وعلى أصحاب الحسين": "and upon the companions of Hussein",
+    "هيهات منا الذلة": "Never shall we accept humiliation",
+    "الموت أولى من ركوب العار": "Death is better than disgrace",
+    "إن الحياة عقيدة وجهاد": "Life is belief and struggle",
+    "كل يوم عاشوراء": "Every day is Ashura",
+    "كل أرض كربلاء": "Every land is Karbala",
+    "بالروح بالدم نفديك يا حسين": "With soul, with blood, we sacrifice for you, O Hussein",
 }
 
-# Patterns to fix (regex-based)
-TRANSLATION_FIXES = [
-    # Fix gendered mistranslations
-    (r'\bgirl went to war\b', 'young warrior went to war'),
-    (r'\bwent to war.*?girl\b', 'young warrior went to war'),
+# =============================================================================
+# SECTION 2: KEY FIGURES OF KARBALA - DETAILED
+# =============================================================================
+
+KARBALA_FIGURES = {
+    # === Imam Hussein (extensive) ===
+    "الحسين": "Hussein",
+    "حسين": "Hussein",
+    "الإمام الحسين": "Imam Hussein",
+    "الحسين بن علي": "Hussein ibn Ali",
+    "سيد الشهداء": "Master of Martyrs",
+    "سيد شباب أهل الجنة": "Master of the Youth of Paradise",
+    "أبو عبد الله": "Abu Abdullah (Hussein's kunya)",
+    "ريحانة رسول الله": "Sweet basil of the Messenger",
+    "سبط النبي": "Grandson of the Prophet",
+    "ابن بنت رسول الله": "Son of the Prophet's daughter",
+    "ابن الزهراء": "Son of Zahra",
+    "ابن علي": "Son of Ali",
+    "الثائر": "the Revolutionary",
+    "الشهيد": "the Martyr",
+    "المظلوم": "the Oppressed",
+    "الغريب": "the Stranger",
+    "غريب كربلاء": "Stranger of Karbala",
+    "قتيل العبرات": "slain one of tears",
+    "قتيل كربلاء": "slain one of Karbala",
+    "ذبيح الفرات": "sacrifice of the Euphrates",
+    "الإمام المقتول": "the slain Imam",
+    "صاحب الطف": "Master of Taff",
+    "صاحب كربلاء": "Master of Karbala",
     
-    # Fix nonsense translations
+    # === Abbas (extensive) ===
+    "العباس": "Abbas",
+    "أبو الفضل العباس": "Abu al-Fadl al-Abbas",
+    "العباس بن علي": "Abbas ibn Ali",
+    "قمر بني هاشم": "Moon of Banu Hashim",
+    "ساقي العطاشى": "Water-bearer of the Thirsty",
+    "بطل العلقمي": "Hero of Alqami",
+    "حامل اللواء": "Standard-bearer",
+    "صاحب الراية": "Keeper of the Banner",
+    "الراية": "the banner",
+    "اللواء": "the standard",
+    "الكفين": "the two hands",
+    "قطع اليدين": "cutting of the hands",
+    "بطل كربلاء": "Hero of Karbala",
+    "أخو الحسين": "Brother of Hussein",
+    "ابن أمير المؤمنين": "Son of Commander of Faithful",
+    "فارس بني هاشم": "Knight of Banu Hashim",
+    "سقاء كربلاء": "Water-carrier of Karbala",
+    "الأكبر": "the Elder (Abbas)",
+    "العبد الصالح": "Righteous Servant",
+    "باب الحوائج": "Gate of Needs",
+    
+    # === Ali Akbar ===
+    "علي الأكبر": "Ali al-Akbar",
+    "علي بن الحسين الأكبر": "Ali ibn Hussein the Elder",
+    "شبيه النبي": "One resembling the Prophet",
+    "أشبه الناس برسول الله": "most resembling the Messenger",
+    "فتى الحسين": "Youth of Hussein",
+    "باكورة الشهداء": "First fruit of martyrs",
+    "أول شهيد": "First martyr (from family)",
+    "شباب أهل الجنة": "Youth of Paradise",
+    
+    # === Ali Asghar ===
+    "علي الأصغر": "Ali al-Asghar",
+    "عبد الله الرضيع": "Abdullah the Infant",
+    "الرضيع": "the nursing infant",
+    "الطفل الرضيع": "the baby",
+    "طفل الحسين": "child of Hussein",
+    "ابن ستة أشهر": "six-month-old",
+    "شهيد المهد": "martyr of the cradle",
+    "ذبيح المهد": "sacrifice of the cradle",
+    "السهم في نحره": "arrow in his throat",
+    "نحر الطفل": "throat of the child",
+    "دم الرضيع": "blood of the infant",
+    
+    # === Other Male Martyrs ===
+    "القاسم بن الحسن": "Qasim ibn Hasan",
+    "القاسم": "Qasim",
+    "عريس كربلاء": "Bridegroom of Karbala",
+    "العريس الشهيد": "Martyred bridegroom",
+    "ابن الإمام الحسن": "Son of Imam Hasan",
+    "حبيب بن مظاهر": "Habib ibn Mudhahir",
+    "حبيب": "Habib",
+    "شيخ الأصحاب": "Elder of the Companions",
+    "الصحابي الجليل": "Noble companion",
+    "مسلم بن عقيل": "Muslim ibn Aqeel",
+    "مسلم": "Muslim",
+    "سفير الحسين": "Ambassador of Hussein",
+    "رسول الحسين": "Messenger of Hussein",
+    "ابن عم الحسين": "Cousin of Hussein",
+    "هانئ بن عروة": "Hani ibn Urwa",
+    "هانئ": "Hani",
+    "شيخ الكوفة": "Sheikh of Kufa",
+    "زهير بن القين": "Zuhayr ibn al-Qayn",
+    "زهير": "Zuhayr",
+    "الحر الرياحي": "Hurr al-Riyahi",
+    "الحر": "Hurr",
+    "التائب": "the Repentant",
+    "الحر التائب": "Hurr the Repentant",
+    "من جيش يزيد": "from Yazid's army",
+    "انضم للحسين": "joined Hussein",
+    "جون": "John (Jawn)",
+    "جون مولى أبي ذر": "Jawn, freedman of Abu Dharr",
+    "العبد الأسود": "the black slave",
+    "وهب النصراني": "Wahb the Christian",
+    "وهب": "Wahb",
+    "برير": "Burayr",
+    "عابس": "Abis",
+    "شوذب": "Shawdhab",
+    "أنيس": "Anees",
+    "نافع": "Nafi",
+    "عمرو بن قرظة": "Amr ibn Qurza",
+    "الأصحاب": "the Companions",
+    "أصحاب الحسين": "Companions of Hussein",
+    "أنصار الحسين": "Supporters of Hussein",
+    "الأنصار": "the Supporters",
+    
+    # === Women of Karbala ===
+    "زينب بنت علي": "Zainab bint Ali",
+    "زينب": "Zainab",
+    "السيدة زينب": "Lady Zainab",
+    "عقيلة بني هاشم": "Noblewoman of Banu Hashim",
+    "شريكة الحسين": "Partner of Hussein",
+    "أم المصائب": "Mother of Calamities",
+    "بطلة كربلاء": "Heroine of Karbala",
+    "رسالة كربلاء": "Message of Karbala (Zainab)",
+    "صوت كربلاء": "Voice of Karbala",
+    "خطبة زينب": "Zainab's sermon",
+    "زينب في الشام": "Zainab in Damascus",
+    "زينب أمام يزيد": "Zainab before Yazid",
+    "أم كلثوم": "Umm Kulthum",
+    "رباب": "Rabab",
+    "أم علي الأصغر": "mother of Ali Asghar",
+    "ليلى": "Layla",
+    "أم علي الأكبر": "mother of Ali Akbar",
+    "سكينة": "Sakina",
+    "سكينة بنت الحسين": "Sakina bint Hussein",
+    "الطفلة": "the little girl",
+    "رقية": "Ruqayya",
+    "رقية بنت الحسين": "Ruqayya bint Hussein",
+    "فاطمة الصغرى": "Fatimah al-Sughra",
+    
+    # === Imam Sajjad ===
+    "الإمام السجاد": "Imam Sajjad",
+    "علي بن الحسين": "Ali ibn Hussein",
+    "زين العابدين": "Zayn al-Abidin",
+    "سيد الساجدين": "Master of those who prostrate",
+    "الإمام المريض": "the sick Imam",
+    "الناجي": "the survivor",
+    "شاهد كربلاء": "witness of Karbala",
+    
+    # === Enemies ===
+    "يزيد بن معاوية": "Yazid ibn Muawiyah",
+    "يزيد": "Yazid",
+    "اللعين": "the accursed",
+    "الفاسق": "the transgressor",
+    "الخمّار": "the drunkard",
+    "قاتل الحسين": "killer of Hussein",
+    "عبيد الله بن زياد": "Ubaydullah ibn Ziyad",
+    "ابن زياد": "Ibn Ziyad",
+    "والي الكوفة": "Governor of Kufa",
+    "عمر بن سعد": "Umar ibn Sa'd",
+    "ابن سعد": "Ibn Sa'd",
+    "قائد الجيش": "commander of the army",
+    "شمر بن ذي الجوشن": "Shimr ibn Dhil-Jawshan",
+    "شمر": "Shimr",
+    "الشمر": "Shimr",
+    "قاطع الرأس": "the beheader",
+    "الذي قطع رأس الحسين": "who cut Hussein's head",
+    "حرملة بن كاهل": "Harmala ibn Kahil",
+    "حرملة": "Harmala",
+    "قاتل الرضيع": "killer of the infant",
+    "رامي السهم": "shooter of the arrow",
+    "سنان بن أنس": "Sinan ibn Anas",
+    "سنان": "Sinan",
+    "خولي": "Khawli",
+    "خولي بن يزيد": "Khawli ibn Yazid",
+    "حامل الرأس": "carrier of the head",
+    "معاوية": "Muawiyah",
+    "بنو أمية": "Banu Umayya (Umayyads)",
+    "الأمويون": "the Umayyads",
+    "الحكم الأموي": "Umayyad rule",
+    "طغاة بني أمية": "tyrants of Banu Umayya",
+}
+
+# =============================================================================
+# SECTION 3: POLITICAL & RESISTANCE TERMINOLOGY
+# =============================================================================
+
+POLITICAL_RESISTANCE = {
+    # === Resistance Concept ===
+    "المقاومة": "the Resistance",
+    "حركة المقاومة": "Resistance Movement",
+    "محور المقاومة": "Axis of Resistance",
+    "فصائل المقاومة": "Resistance Factions",
+    "أبطال المقاومة": "Heroes of the Resistance",
+    "رجال المقاومة": "Men of the Resistance",
+    "مقاتلو المقاومة": "Resistance Fighters",
+    "المقاوم": "resistance fighter",
+    "المقاومون": "resistance fighters",
+    "المجاهد": "mujahid (one who struggles)",
+    "المجاهدين": "mujahideen",
+    "الجهاد": "jihad (struggle)",
+    "جهاد المقاومة": "resistance jihad",
+    "جهاد الدفاع": "defensive jihad",
+    "المدافعون": "the defenders",
+    "خط المقاومة": "Line of Resistance",
+    "ثقافة المقاومة": "culture of resistance",
+    "روح المقاومة": "spirit of resistance",
+    "إرادة المقاومة": "will of resistance",
+    "صمود المقاومة": "steadfastness of resistance",
+    "انتصار المقاومة": "victory of the resistance",
+    "وعد المقاومة": "promise of the resistance",
+    
+    # === Hezbollah Terminology ===
+    "حزب الله": "Hezbollah",
+    "الحزب": "the Party",
+    "المقاومة الإسلامية": "Islamic Resistance",
+    "المقاومة في لبنان": "Resistance in Lebanon",
+    "المقاومة اللبنانية": "Lebanese Resistance",
+    "السيد": "al-Sayyid (title)",
+    "السيد حسن نصر الله": "Sayyid Hassan Nasrallah",
+    "سماحة السيد": "His Eminence al-Sayyid",
+    "الأمين العام": "Secretary-General",
+    "قيادة المقاومة": "Resistance Leadership",
+    "الشهيد القائد": "Martyr Commander",
+    "عماد مغنية": "Imad Mughniyeh",
+    "الحاج عماد": "Hajj Imad",
+    "الحاج رضوان": "Hajj Radwan",
+    "مصطفى بدر الدين": "Mustafa Badreddine",
+    "ذو الفقار": "Dhulfiqar (Badreddine)",
+    "السيد عباس الموسوي": "Sayyid Abbas al-Musawi",
+    "الشيخ راغب حرب": "Sheikh Ragheb Harb",
+    "حرب تموز": "July War (2006)",
+    "نصر تموز": "July Victory",
+    "الانتصار الإلهي": "Divine Victory",
+    "حرب ال33 يوماً": "33-Day War",
+    "تحرير الجنوب": "Liberation of the South",
+    "عيد المقاومة والتحرير": "Resistance and Liberation Day",
+    "يوم التحرير": "Liberation Day",
+    "المنطقة الأمنية": "Security Zone",
+    "الشريط الحدودي": "Border Strip",
+    "عملية": "operation",
+    "عملية فدائية": "martyrdom operation",
+    "العملية الاستشهادية": "martyrdom operation",
+    "الوحدة": "unit",
+    "وحدة النخبة": "elite unit",
+    "قوة الرضوان": "Radwan Force",
+    
+    # === Palestinian Cause ===
+    "فلسطين": "Palestine",
+    "القضية الفلسطينية": "Palestinian Cause",
+    "قضية فلسطين": "Palestine issue",
+    "أرض فلسطين": "Land of Palestine",
+    "الأرض المحتلة": "Occupied Land",
+    "الأراضي المحتلة": "Occupied Territories",
+    "الضفة الغربية": "West Bank",
+    "قطاع غزة": "Gaza Strip",
+    "غزة": "Gaza",
+    "القدس": "Jerusalem",
+    "القدس الشريف": "Noble Jerusalem",
+    "المسجد الأقصى": "Al-Aqsa Mosque",
+    "الأقصى": "Al-Aqsa",
+    "المسرى": "place of night journey",
+    "قبة الصخرة": "Dome of the Rock",
+    "حائط البراق": "Buraq Wall",
+    "حق العودة": "Right of Return",
+    "اللاجئون": "refugees",
+    "اللاجئون الفلسطينيون": "Palestinian refugees",
+    "المخيمات": "camps",
+    "مخيم اللاجئين": "refugee camp",
+    "النكبة": "Nakba (catastrophe)",
+    "النكسة": "Naksa (setback)",
+    "الاحتلال": "occupation",
+    "الاحتلال الصهيوني": "Zionist occupation",
+    "الاحتلال الإسرائيلي": "Israeli occupation",
+    "الكيان الصهيوني": "Zionist entity",
+    "الكيان": "the entity",
+    "الكيان المحتل": "occupying entity",
+    "إسرائيل": "Israel",
+    "الصهاينة": "Zionists",
+    "الصهيونية": "Zionism",
+    "المشروع الصهيوني": "Zionist project",
+    "التطبيع": "normalization",
+    "رفض التطبيع": "rejection of normalization",
+    "المقاطعة": "boycott",
+    "حركات المقاومة الفلسطينية": "Palestinian resistance movements",
+    "حماس": "Hamas",
+    "الجهاد الإسلامي": "Islamic Jihad",
+    "كتائب القسام": "Qassam Brigades",
+    "كتائب عز الدين القسام": "Izz ad-Din al-Qassam Brigades",
+    "سرايا القدس": "Jerusalem Brigades",
+    "كتائب شهداء الأقصى": "Al-Aqsa Martyrs Brigades",
+    "الجبهة الشعبية": "Popular Front (PFLP)",
+    "الانتفاضة": "Intifada (uprising)",
+    "انتفاضة الأقصى": "Al-Aqsa Intifada",
+    "انتفاضة الحجارة": "Stone Intifada",
+    "طوفان الأقصى": "Al-Aqsa Flood",
+    "عملية طوفان الأقصى": "Operation Al-Aqsa Flood",
+    "السابع من أكتوبر": "Seventh of October",
+    
+    # === Axis of Resistance ===
+    "إيران": "Iran",
+    "الجمهورية الإسلامية": "Islamic Republic",
+    "الولي الفقيه": "Supreme Leader",
+    "المرشد": "the Leader",
+    "المرشد الأعلى": "Supreme Leader",
+    "الإمام الخامنئي": "Imam Khamenei",
+    "السيد الخامنئي": "Sayyid Khamenei",
+    "الإمام الخميني": "Imam Khomeini",
+    "الثورة الإسلامية": "Islamic Revolution",
+    "الحرس الثوري": "Revolutionary Guard (IRGC)",
+    "فيلق القدس": "Quds Force",
+    "الشهيد سليماني": "Martyr Soleimani",
+    "قاسم سليماني": "Qasem Soleimani",
+    "الحاج قاسم": "Hajj Qasem",
+    "أبو مهدي المهندس": "Abu Mahdi al-Muhandis",
+    "الحشد الشعبي": "Popular Mobilization Forces (PMF)",
+    "الحشد": "the Mobilization",
+    "فصائل الحشد": "PMF factions",
+    "كتائب حزب الله": "Kata'ib Hezbollah",
+    "عصائب أهل الحق": "Asa'ib Ahl al-Haq",
+    "حركة النجباء": "Harakat al-Nujaba",
+    "لواء الفاطميين": "Fatemiyoun Brigade",
+    "لواء الزينبيين": "Zainabiyoun Brigade",
+    "الحوثيون": "Houthis",
+    "أنصار الله": "Ansar Allah",
+    "اليمن": "Yemen",
+    "سوريا": "Syria",
+    "الجيش السوري": "Syrian Army",
+    "الدفاع عن المقدسات": "defense of holy sites",
+    "حماية المراقد": "protection of shrines",
+    "المقدسات الشيعية": "Shia holy sites",
+    "سيدة زينب": "Sayyida Zainab (shrine)",
+    
+    # === Islamic Governance ===
+    "الخلافة": "caliphate",
+    "الخليفة": "caliph",
+    "الإمامة": "imamate",
+    "الإمام": "imam",
+    "الأمة": "ummah (Muslim nation)",
+    "الأمة الإسلامية": "Islamic Ummah",
+    "وحدة الأمة": "unity of the ummah",
+    "الوحدة الإسلامية": "Islamic Unity",
+    "التقريب": "rapprochement (between sects)",
+    "أسبوع الوحدة": "Unity Week",
+    "الحكم الإسلامي": "Islamic governance",
+    "الدولة الإسلامية": "Islamic State",
+    "تطبيق الشريعة": "implementation of Sharia",
+    "الولاية": "wilayah (guardianship/authority)",
+    "ولاية الفقيه": "Wilayat al-Faqih",
+    "الحكومة الإسلامية": "Islamic Government",
+    "الشورى": "consultation (shura)",
+    "مجلس الشورى": "consultative council",
+    "البيعة": "pledge of allegiance",
+    "الطاعة": "obedience",
+    "طاعة ولي الأمر": "obedience to the ruler",
+    
+    # === Leadership Titles ===
+    "السيد": "Sayyid (descendant of Prophet)",
+    "الشيخ": "Sheikh",
+    "الشيخ المجاهد": "Mujahid Sheikh",
+    "الإمام": "Imam",
+    "آية الله": "Ayatollah",
+    "آية الله العظمى": "Grand Ayatollah",
+    "حجة الإسلام": "Hujjat al-Islam",
+    "المرجع": "Marja (religious authority)",
+    "مرجع التقليد": "Marja of Emulation",
+    "العلامة": "Allamah (great scholar)",
+    "المفتي": "Mufti",
+    "المفتي العام": "Grand Mufti",
+    "القاضي": "Judge (Qadi)",
+    "الحاج": "Hajj (honorific)",
+    "الحاجة": "Hajja (fem.)",
+    "الأمير": "Amir/Emir",
+    "أمير المؤمنين": "Commander of the Faithful",
+    "القائد": "Commander/Leader",
+    "القيادة": "Leadership",
+    "المرشد الروحي": "Spiritual Guide",
+    "أبو": "Abu (father of)",
+    "أم": "Umm (mother of)",
+    "ابن": "Ibn (son of)",
+    "بنت": "Bint (daughter of)",
+    
+    # === Enemies & Opposition ===
+    "الاستكبار": "arrogance (imperialism)",
+    "الاستكبار العالمي": "global arrogance",
+    "الشيطان الأكبر": "Great Satan",
+    "أمريكا": "America",
+    "الولايات المتحدة": "United States",
+    "الغرب": "the West",
+    "الإمبريالية": "imperialism",
+    "الاستعمار": "colonialism",
+    "الهيمنة": "hegemony",
+    "الهيمنة الأمريكية": "American hegemony",
+    "العدوان": "aggression",
+    "العدوان الأمريكي": "American aggression",
+    "العدوان الإسرائيلي": "Israeli aggression",
+    "المؤامرة": "conspiracy",
+    "المخطط": "plot/scheme",
+    "التآمر": "conspiring",
+    "الفتنة": "sedition/strife",
+    "الفتنة الطائفية": "sectarian strife",
+    "التكفير": "takfir (excommunication)",
+    "التكفيريون": "takfiris",
+    "داعش": "ISIS/Daesh",
+    "الإرهاب": "terrorism",
+    "الإرهاب التكفيري": "takfiri terrorism",
+    "النفاق": "hypocrisy",
+    "المنافقين": "hypocrites",
+    "العملاء": "agents/collaborators",
+    "الخونة": "traitors",
+    "الخيانة": "betrayal",
+}
+
+# =============================================================================
+# SECTION 4: NASHEED & DEVOTIONAL VOCABULARY
+# =============================================================================
+
+NASHEED_DEVOTIONAL = {
+    # === Praise Vocabulary ===
+    "المدح": "praise",
+    "مدح النبي": "praise of the Prophet",
+    "مديح": "eulogy/praise",
+    "المديح النبوي": "Prophetic praise poetry",
+    "الثناء": "praise/laudation",
+    "التمجيد": "glorification",
+    "التسبيح": "glorification (tasbih)",
+    "التحميد": "praising (tahmid)",
+    "التكبير": "magnifying (takbir)",
+    "التهليل": "declaring oneness (tahlil)",
+    "الصلاة على النبي": "sending blessings on Prophet",
+    "صلوا على محمد": "send blessings upon Muhammad",
+    "اللهم صل على محمد": "O Allah, bless Muhammad",
+    "وآله": "and his family",
+    "وصحبه": "and his companions",
+    "وسلم": "and grant peace",
+    "صلى الله عليه وسلم": "peace be upon him",
+    "صلى الله عليه وآله": "peace upon him and his family",
+    "عليه السلام": "peace be upon him",
+    "عليها السلام": "peace be upon her",
+    "عليهم السلام": "peace be upon them",
+    "رضي الله عنه": "may Allah be pleased with him",
+    "رضي الله عنها": "may Allah be pleased with her",
+    "قدس سره": "may his secret be sanctified",
+    "نور الله مرقده": "may Allah illuminate his tomb",
+    
+    # === Prophetic Titles ===
+    "سيد المرسلين": "Master of Messengers",
+    "خاتم النبيين": "Seal of Prophets",
+    "سيد الأنبياء": "Master of Prophets",
+    "نبي الرحمة": "Prophet of Mercy",
+    "حبيب الله": "Beloved of Allah",
+    "رسول الله": "Messenger of Allah",
+    "النبي الأمي": "the Unlettered Prophet",
+    "المصطفى": "the Chosen One",
+    "المجتبى": "the Selected One",
+    "الأمين": "the Trustworthy",
+    "الصادق": "the Truthful",
+    "شفيع الأمة": "Intercessor of the Ummah",
+    "رحمة للعالمين": "mercy to the worlds",
+    "نور العالمين": "light of the worlds",
+    "سراج منير": "illuminating lamp",
+    "بشير ونذير": "bearer of good tidings and warner",
+    "الطه": "Taha",
+    "اليس": "Yasin",
+    
+    # === Ahl al-Bayt Praise ===
+    "أهل البيت": "Ahl al-Bayt",
+    "آل البيت": "Family of the Prophet",
+    "آل محمد": "Family of Muhammad",
+    "آل طه": "Family of Taha",
+    "آل يس": "Family of Yasin",
+    "العترة الطاهرة": "the Pure Progeny",
+    "الذرية الطاهرة": "the Pure Offspring",
+    "أصحاب الكساء": "People of the Cloak",
+    "الخمسة الطيبة": "the Five Pure Ones",
+    "حب أهل البيت": "love of Ahl al-Bayt",
+    "ولاء أهل البيت": "loyalty to Ahl al-Bayt",
+    "موالي أهل البيت": "devotees of Ahl al-Bayt",
+    "محبي أهل البيت": "lovers of Ahl al-Bayt",
+    "شيعة أهل البيت": "Shia of Ahl al-Bayt",
+    "الحب في الله": "love for Allah's sake",
+    "المودة في القربى": "love for the near kin",
+    
+    # === Imam Ali Titles ===
+    "أمير المؤمنين": "Commander of the Faithful",
+    "الكرار": "the Champion (Karrar)",
+    "ليث الله": "Lion of Allah",
+    "أسد الله الغالب": "Victorious Lion of Allah",
+    "حيدر": "Haydar (Lion)",
+    "حيدرة": "Haydara",
+    "الوصي": "the Successor",
+    "وصي رسول الله": "Successor of the Messenger",
+    "ولي الله": "Friend of Allah",
+    "باب مدينة العلم": "Gate of the City of Knowledge",
+    "يعسوب الدين": "Leader of the Faith",
+    "قسيم الجنة والنار": "Divider of Paradise and Hell",
+    "صاحب ذي الفقار": "Wielder of Dhulfiqar",
+    "فاتح خيبر": "Conqueror of Khaybar",
+    "قاتل عمرو": "Slayer of Amr",
+    "مبيد الشرك": "Destroyer of Polytheism",
+    "المرتضى": "the Chosen (Murtada)",
+    "أبو الحسنين": "Father of the two Hasans",
+    "أبو تراب": "Abu Turab (Father of Dust)",
+    
+    # === Fatimah Titles ===
+    "فاطمة الزهراء": "Fatimah al-Zahra",
+    "الزهراء": "al-Zahra (the Radiant)",
+    "البتول": "al-Batool (the Chaste)",
+    "سيدة نساء العالمين": "Mistress of Women of the Worlds",
+    "أم أبيها": "Mother of her Father",
+    "الصديقة": "the Truthful",
+    "الطاهرة": "the Pure",
+    "المرضية": "the Pleasing",
+    "الراضية": "the Satisfied",
+    "المحدثة": "the Spoken-to (by angels)",
+    "الحوراء الإنسية": "the Human Houri",
+    "بضعة النبي": "Part of the Prophet",
+    "حبيبة أبيها": "Beloved of her Father",
+    "الكوثر": "al-Kawthar (Abundance)",
+    
+    # === Supplication Phrases ===
+    "يا رب": "O Lord",
+    "يا الله": "O Allah",
+    "يا رب العالمين": "O Lord of the Worlds",
+    "يا أرحم الراحمين": "O Most Merciful",
+    "يا غفور": "O Forgiving One",
+    "يا رحيم": "O Merciful One",
+    "يا كريم": "O Generous One",
+    "يا ودود": "O Loving One",
+    "يا حنان": "O Compassionate One",
+    "يا منان": "O Bestower",
+    "يا ذا الجلال والإكرام": "O Possessor of Majesty and Honor",
+    "استجب دعاءنا": "answer our prayer",
+    "لا تردنا خائبين": "do not return us disappointed",
+    "ارحمنا": "have mercy on us",
+    "اغفر لنا": "forgive us",
+    "تب علينا": "accept our repentance",
+    "اهدنا": "guide us",
+    "نجنا": "save us",
+    "أعنا": "help us",
+    "وفقنا": "grant us success",
+    "سددنا": "direct us aright",
+    "ثبتنا": "make us steadfast",
+    "آمين": "Amen",
+    "آمين يا رب العالمين": "Amen, O Lord of the Worlds",
+    
+    # === Nasheed Refrains ===
+    "لبيك": "Here I am (at your service)",
+    "لبيك يا الله": "Here I am, O Allah",
+    "لبيك يا رسول الله": "Here I am, O Messenger of Allah",
+    "لبيك يا حسين": "Here I am, O Hussein",
+    "لبيك يا زينب": "Here I am, O Zainab",
+    "لبيك يا مهدي": "Here I am, O Mahdi",
+    "فداك روحي": "may my soul be your ransom",
+    "فداك أبي وأمي": "may my father and mother be your ransom",
+    "نحن لك فدا": "we are your sacrifice",
+    "بأرواحنا نفديك": "with our souls we sacrifice for you",
+    "نفديك بالدم": "we sacrifice for you with blood",
+    "بالروح بالدم": "with soul, with blood",
+    "هذا هو الطريق": "this is the path",
+    "هذا هو النهج": "this is the way",
+    "هذا هو الدين": "this is the religion",
+    "سنمضي": "we shall continue",
+    "سنبقى": "we shall remain",
+    "لن ننسى": "we shall not forget",
+    "لن نستسلم": "we shall not surrender",
+    "لن نركع": "we shall not kneel",
+    "إلا لله": "except to Allah",
+    "الله غايتنا": "Allah is our goal",
+    "الرسول قدوتنا": "the Messenger is our example",
+    "الجهاد سبيلنا": "Jihad is our path",
+    "الشهادة أمنيتنا": "Martyrdom is our wish",
+    "الموت في سبيل الله أسمى أمانينا": "Death in Allah's path is our highest aspiration",
+}
+
+# =============================================================================
+# SECTION 5: ARABIC POETIC & RHETORICAL DEVICES
+# =============================================================================
+
+POETIC_RHETORICAL = {
+    # === Poetic Forms ===
+    "القصيدة": "qasida (ode)",
+    "الشعر": "poetry",
+    "الشعر الفصيح": "classical Arabic poetry",
+    "الشعر العامي": "colloquial poetry",
+    "النشيد": "nasheed",
+    "الأنشودة": "chant/song",
+    "المديح": "panegyric",
+    "الرثاء": "elegy",
+    "الهجاء": "satire",
+    "الغزل": "love poetry",
+    "الحماسة": "heroic poetry",
+    "اللطمية": "latmiyya (mourning chant)",
+    "الأبوذية": "abudiyya (Iraqi form)",
+    "الزهيرية": "zuhayriyya",
+    "الموشح": "muwashshah",
+    "الزجل": "zajal",
+    "الدارمي": "darmi (Iraqi form)",
+    "النايل": "nayal",
+    "العتابا": "ataba",
+    "الميجنا": "mijana",
+    "الموال": "mawal",
+    
+    # === Poetic Structure ===
+    "البيت": "bayt (verse/line)",
+    "الأبيات": "verses",
+    "الصدر": "sadr (first hemistich)",
+    "العجز": "ajuz (second hemistich)",
+    "القافية": "rhyme",
+    "الروي": "rhyme letter",
+    "الوزن": "meter",
+    "البحر": "poetic meter",
+    "بحر الطويل": "Tawil meter",
+    "بحر البسيط": "Basit meter",
+    "بحر الكامل": "Kamil meter",
+    "بحر الوافر": "Wafir meter",
+    "بحر الرجز": "Rajaz meter",
+    "بحر الرمل": "Ramal meter",
+    "بحر المتقارب": "Mutaqarib meter",
+    "التفعيلة": "metrical foot",
+    "العروض": "prosody",
+    "الزحاف": "metrical license",
+    "المقطع": "stanza/section",
+    "المطلع": "opening verse",
+    "الخاتمة": "closing verse",
+    
+    # === Rhetorical Devices ===
+    "البلاغة": "rhetoric",
+    "الفصاحة": "eloquence",
+    "البيان": "clarity/exposition",
+    "البديع": "embellishment",
+    "المعاني": "meanings/semantics",
+    "التشبيه": "simile",
+    "الاستعارة": "metaphor",
+    "الاستعارة المكنية": "implicit metaphor",
+    "الاستعارة التصريحية": "explicit metaphor",
+    "الكناية": "metonymy",
+    "المجاز": "figurative language",
+    "المجاز المرسل": "metonymy",
+    "الطباق": "antithesis",
+    "المقابلة": "parallelism",
+    "الجناس": "paronomasia/wordplay",
+    "السجع": "prose rhyme",
+    "الترصيع": "internal rhyme",
+    "التورية": "double entendre",
+    "التضمين": "enjambment/quotation",
+    "الاقتباس": "quotation",
+    "الإشارة": "allusion",
+    "التلميح": "hint/allusion",
+    "الرمز": "symbol",
+    "الرمزية": "symbolism",
+    "الإيجاز": "conciseness",
+    "الإطناب": "elaboration",
+    "التكرار": "repetition",
+    "التوكيد": "emphasis",
+    "الالتفات": "apostrophe/shift",
+    "النداء": "vocative/calling out",
+    "الاستفهام": "interrogation",
+    "الاستفهام البلاغي": "rhetorical question",
+    "التعجب": "exclamation",
+    "التمني": "optative",
+    "الترجي": "hoping",
+    "القسم": "oath",
+    "الدعاء": "invocation",
+    "الأمر": "command",
+    "النهي": "prohibition",
+    
+    # === Common Metaphors in Nasheeds ===
+    "نور": "light",
+    "النور المحمدي": "Muhammadan Light",
+    "نور الهداية": "light of guidance",
+    "سراج منير": "illuminating lamp",
+    "شمس": "sun",
+    "شمس الحق": "sun of truth",
+    "شمس الهداية": "sun of guidance",
+    "قمر": "moon",
+    "قمر بني هاشم": "moon of Banu Hashim",
+    "بدر": "full moon",
+    "نجم": "star",
+    "نجم الهدى": "star of guidance",
+    "كوكب": "planet/star",
+    "أسد": "lion",
+    "ليث": "lion",
+    "ضرغام": "lion",
+    "سبع": "lion/predator",
+    "صقر": "falcon",
+    "نسر": "eagle",
+    "بحر": "sea",
+    "بحر العلم": "sea of knowledge",
+    "محيط": "ocean",
+    "جبل": "mountain",
+    "جبل الصبر": "mountain of patience",
+    "صخرة": "rock",
+    "طود": "mountain",
+    "سيف": "sword",
+    "سيف الله": "Sword of Allah",
+    "سيف الإسلام": "Sword of Islam",
+    "درع": "shield",
+    "حصن": "fortress",
+    "حصن الإسلام": "fortress of Islam",
+    "راية": "banner",
+    "راية الحق": "banner of truth",
+    "علم": "flag",
+    "مشعل": "torch",
+    "منار": "lighthouse",
+    "منارة": "minaret",
+    "قبس": "spark/flame",
+    "شعلة": "flame",
+    "نار": "fire",
+    "روضة": "garden",
+    "جنة": "paradise",
+    "فردوس": "highest paradise",
+    "وردة": "rose",
+    "زهرة": "flower",
+    "ريحان": "sweet basil",
+    "ريحانة": "sweet basil (person)",
+    
+    # === Emotional States ===
+    "الشوق": "longing",
+    "الحنين": "nostalgia",
+    "الوجد": "passion/ecstasy",
+    "الوله": "infatuation",
+    "العشق": "passionate love",
+    "الحب": "love",
+    "المحبة": "love/affection",
+    "الود": "affection",
+    "الغرام": "deep love",
+    "الهوى": "desire/passion",
+    "اللوعة": "anguish",
+    "الحرقة": "burning (emotional)",
+    "الكمد": "grief",
+    "الأسى": "sorrow",
+    "الحزن": "sadness",
+    "الغم": "distress",
+    "الهم": "worry",
+    "الكرب": "anguish",
+    "الضيق": "distress",
+    "القلق": "anxiety",
+    "الخوف": "fear",
+    "الرجاء": "hope",
+    "الأمل": "hope",
+    "الطمع": "aspiration",
+    "اليقين": "certainty",
+    "الإيمان": "faith",
+    "السكينة": "tranquility",
+    "الطمأنينة": "reassurance",
+    "الفرح": "joy",
+    "السرور": "happiness",
+    "البهجة": "delight",
+    "الغبطة": "bliss",
+    "النشوة": "ecstasy",
+}
+
+# =============================================================================
+# SECTION 6: ISLAMIC GENERAL TERMS
+# =============================================================================
+
+ISLAMIC_GENERAL = {
+    # === Core Concepts ===
+    "الله": "Allah",
+    "الإسلام": "Islam",
+    "المسلم": "Muslim",
+    "المسلمون": "Muslims",
+    "الإيمان": "faith (iman)",
+    "المؤمن": "believer",
+    "المؤمنون": "believers",
+    "التوحيد": "monotheism (tawhid)",
+    "الشريعة": "Islamic law (sharia)",
+    "الفقه": "jurisprudence (fiqh)",
+    "العقيدة": "creed (aqidah)",
+    "الأصول": "principles",
+    "الفروع": "branches",
+    "الحلال": "permissible (halal)",
+    "الحرام": "forbidden (haram)",
+    "المكروه": "disliked (makruh)",
+    "المستحب": "recommended (mustahab)",
+    "المباح": "permitted (mubah)",
+    "الواجب": "obligatory (wajib)",
+    "الفرض": "obligatory (fard)",
+    "السنة": "tradition (sunnah)",
+    "البدعة": "innovation (bid'ah)",
+    "التقوى": "God-consciousness (taqwa)",
+    "التوبة": "repentance (tawbah)",
+    "الصبر": "patience (sabr)",
+    "الشكر": "gratitude (shukr)",
+    "التوكل": "trust in God (tawakkul)",
+    "الإحسان": "excellence (ihsan)",
+    "الخشوع": "humility (khushu)",
+    "الزهد": "asceticism (zuhd)",
+    "الورع": "piety (wara')",
+    "التقليد": "following (taqlid)",
+    "الاجتهاد": "independent reasoning (ijtihad)",
+    "الإجماع": "consensus (ijma)",
+    "القياس": "analogy (qiyas)",
+    
+    # === Afterlife ===
+    "الجنة": "paradise (jannah)",
+    "النار": "hellfire",
+    "جهنم": "Jahannam (hell)",
+    "الآخرة": "the hereafter",
+    "الدنيا": "this world",
+    "يوم القيامة": "Day of Judgment",
+    "يوم الحساب": "Day of Reckoning",
+    "الحشر": "resurrection/gathering",
+    "البعث": "resurrection",
+    "النشور": "rising (from graves)",
+    "الحساب": "accounting",
+    "الميزان": "scales (of judgment)",
+    "الصراط": "the bridge",
+    "الصراط المستقيم": "straight path",
+    "البرزخ": "barrier realm (barzakh)",
+    "القبر": "grave",
+    "عذاب القبر": "punishment of grave",
+    "نعيم القبر": "bliss of grave",
+    "الشفاعة": "intercession",
+    "الحوض": "the Pool (of Kawthar)",
+    
+    # === Angels ===
+    "الملائكة": "angels",
+    "جبرائيل": "Gabriel (Jibreel)",
+    "ميكائيل": "Michael",
+    "إسرافيل": "Israfil",
+    "عزرائيل": "Azrael",
+    "ملك الموت": "Angel of Death",
+    "منكر ونكير": "Munkar and Nakir",
+    "رضوان": "Ridwan (guardian of paradise)",
+    "مالك": "Malik (guardian of hell)",
+    "الكرام الكاتبين": "Noble Scribes",
+    "الحفظة": "Guardian Angels",
+    
+    # === Quran ===
+    "القرآن": "the Quran",
+    "القرآن الكريم": "Noble Quran",
+    "كتاب الله": "Book of Allah",
+    "الذكر": "the Reminder",
+    "الفرقان": "the Criterion",
+    "الآية": "verse",
+    "الآيات": "verses",
+    "السورة": "chapter (surah)",
+    "الجزء": "section (juz)",
+    "التفسير": "exegesis",
+    "التجويد": "recitation rules",
+    "الحفظ": "memorization",
+    "التلاوة": "recitation",
+    "القراءات": "variant readings",
+    "أسباب النزول": "occasions of revelation",
+    "المحكم والمتشابه": "clear and ambiguous verses",
+    "الناسخ والمنسوخ": "abrogating and abrogated",
+    
+    # === Hadith ===
+    "الحديث": "hadith",
+    "الأحاديث": "hadiths",
+    "السنة النبوية": "Prophetic tradition",
+    "صحيح": "authentic",
+    "حسن": "good",
+    "ضعيف": "weak",
+    "موضوع": "fabricated",
+    "متواتر": "widely transmitted",
+    "آحاد": "single-chain",
+    "الإسناد": "chain of narration",
+    "المتن": "text",
+    "الراوي": "narrator",
+    "الحديث القدسي": "sacred hadith",
+}
+
+# =============================================================================
+# SECTION 7: PROPHETS & RELIGIOUS FIGURES
+# =============================================================================
+
+PROPHETS_FIGURES = {
+    # === Prophets ===
+    "آدم": "Adam",
+    "إدريس": "Idris (Enoch)",
+    "نوح": "Noah",
+    "هود": "Hud",
+    "صالح": "Salih",
+    "إبراهيم": "Abraham (Ibrahim)",
+    "الخليل": "the Friend (Ibrahim)",
+    "لوط": "Lot",
+    "إسماعيل": "Ishmael",
+    "الذبيح": "the Sacrifice (Ishmael)",
+    "إسحاق": "Isaac",
+    "يعقوب": "Jacob",
+    "يوسف": "Joseph",
+    "الصديق": "the Truthful (Joseph)",
+    "أيوب": "Job",
+    "شعيب": "Shu'ayb",
+    "موسى": "Moses",
+    "الكليم": "the One Spoken to (Moses)",
+    "هارون": "Aaron",
+    "داود": "David",
+    "سليمان": "Solomon",
+    "إلياس": "Elijah",
+    "اليسع": "Elisha",
+    "يونس": "Jonah",
+    "ذو النون": "Dhul-Nun (Jonah)",
+    "ذو الكفل": "Dhul-Kifl",
+    "زكريا": "Zechariah",
+    "يحيى": "John the Baptist",
+    "عيسى": "Jesus",
+    "المسيح": "the Messiah",
+    "روح الله": "Spirit of Allah (Jesus)",
+    "كلمة الله": "Word of Allah (Jesus)",
+    
+    # === Prophet Muhammad ===
+    "محمد": "Muhammad",
+    "أحمد": "Ahmad",
+    "النبي": "the Prophet",
+    "الرسول": "the Messenger",
+    "رسول الله": "Messenger of Allah",
+    "نبي الله": "Prophet of Allah",
+    "خاتم النبيين": "Seal of Prophets",
+    "سيد الخلق": "Master of Creation",
+    "سيد ولد آدم": "Master of Adam's children",
+    
+    # === Prophet's Family ===
+    "آمنة": "Aminah (Prophet's mother)",
+    "عبد الله": "Abdullah (Prophet's father)",
+    "عبد المطلب": "Abdul-Muttalib",
+    "حليمة السعدية": "Halimah al-Sa'diyah",
+    "خديجة": "Khadijah",
+    "أم المؤمنين": "Mother of Believers",
+    "الطاهرة": "the Pure One (Khadijah)",
+    "عائشة": "Aisha",
+    "حفصة": "Hafsa",
+    "أم سلمة": "Umm Salamah",
+    "زينب": "Zainab",
+    "إبراهيم": "Ibrahim (Prophet's son)",
+    "القاسم": "Qasim",
+    
+    # === Twelve Imams ===
+    "الأئمة الاثنا عشر": "Twelve Imams",
+    "الإمام علي": "Imam Ali",
+    "الإمام الحسن": "Imam Hasan",
+    "الإمام الحسين": "Imam Hussein",
+    "الإمام السجاد": "Imam Sajjad",
+    "الإمام الباقر": "Imam Baqir",
+    "الإمام الصادق": "Imam Sadiq",
+    "الإمام الكاظم": "Imam Kadhim",
+    "الإمام الرضا": "Imam Ridha",
+    "الإمام الجواد": "Imam Jawad",
+    "الإمام الهادي": "Imam Hadi",
+    "الإمام العسكري": "Imam Askari",
+    "الإمام المهدي": "Imam Mahdi",
+    "المهدي المنتظر": "Awaited Mahdi",
+    "صاحب الزمان": "Master of the Age",
+    "الحجة": "al-Hujjah (the Proof)",
+    "القائم": "al-Qa'im (the Riser)",
+    "بقية الله": "Baqiyyatullah",
+    "المنقذ": "the Savior",
+    "المخلص": "the Deliverer",
+    
+    # === Companions ===
+    "الصحابة": "Companions",
+    "أبو بكر": "Abu Bakr",
+    "عمر بن الخطاب": "Umar ibn al-Khattab",
+    "عثمان بن عفان": "Uthman ibn Affan",
+    "سلمان الفارسي": "Salman al-Farisi",
+    "أبو ذر الغفاري": "Abu Dharr al-Ghifari",
+    "عمار بن ياسر": "Ammar ibn Yasir",
+    "المقداد": "Miqdad",
+    "بلال الحبشي": "Bilal al-Habashi",
+    "خالد بن الوليد": "Khalid ibn al-Walid",
+    "سيف الله": "Sword of Allah",
+    "حمزة بن عبد المطلب": "Hamza ibn Abdul-Muttalib",
+    "سيد الشهداء": "Master of Martyrs (Hamza)",
+    "جعفر الطيار": "Ja'far al-Tayyar",
+    "ذو الجناحين": "One with Two Wings",
+}
+
+# =============================================================================
+# SECTION 8: PRAYER & WORSHIP
+# =============================================================================
+
+PRAYER_WORSHIP = {
+    # === Five Pillars ===
+    "أركان الإسلام": "Pillars of Islam",
+    "الشهادة": "testimony of faith",
+    "الصلاة": "prayer",
+    "الزكاة": "alms",
+    "الصوم": "fasting",
+    "الحج": "pilgrimage",
+    
+    # === Prayer Terms ===
+    "الوضوء": "ablution (wudu)",
+    "الغسل": "ritual bath",
+    "التيمم": "dry ablution",
+    "الطهارة": "purity",
+    "النجاسة": "impurity",
+    "القبلة": "prayer direction",
+    "المسجد": "mosque",
+    "الجامع": "congregational mosque",
+    "المصلى": "prayer area",
+    "المحراب": "prayer niche",
+    "المنبر": "pulpit",
+    "الأذان": "call to prayer",
+    "الإقامة": "second call",
+    "المؤذن": "muezzin",
+    "الركعة": "unit of prayer",
+    "الركوع": "bowing",
+    "السجود": "prostration",
+    "القيام": "standing",
+    "التشهد": "testimony",
+    "التسليم": "greeting to end prayer",
+    "القنوت": "supplication in prayer",
+    
+    # === Daily Prayers ===
+    "صلاة الفجر": "dawn prayer",
+    "صلاة الظهر": "noon prayer",
+    "صلاة العصر": "afternoon prayer",
+    "صلاة المغرب": "sunset prayer",
+    "صلاة العشاء": "night prayer",
+    "صلاة الجمعة": "Friday prayer",
+    "صلاة العيد": "Eid prayer",
+    "صلاة الجنازة": "funeral prayer",
+    "صلاة الليل": "night prayer (tahajjud)",
+    "النافلة": "voluntary prayer",
+    
+    # === Common Dhikr ===
+    "بسم الله الرحمن الرحيم": "In the name of Allah, Most Gracious, Most Merciful",
+    "الحمد لله": "praise be to Allah",
+    "الحمد لله رب العالمين": "praise be to Allah, Lord of the Worlds",
+    "سبحان الله": "glory be to Allah",
+    "الله أكبر": "Allah is Greatest",
+    "لا إله إلا الله": "there is no god but Allah",
+    "لا حول ولا قوة إلا بالله": "there is no power except with Allah",
+    "إنا لله وإنا إليه راجعون": "to Allah we belong and to Him we return",
+    "ما شاء الله": "as Allah willed",
+    "إن شاء الله": "if Allah wills",
+    "جزاك الله خيراً": "may Allah reward you",
+    "بارك الله فيك": "may Allah bless you",
+    "أستغفر الله": "I seek forgiveness from Allah",
+    "توكلت على الله": "I place my trust in Allah",
+    "حسبي الله": "Allah is sufficient for me",
+    "حسبنا الله ونعم الوكيل": "Allah is sufficient for us, and He is the best disposer of affairs",
+    "يا الله": "O Allah",
+    "اللهم": "O Allah",
+    "السلام عليكم": "peace be upon you",
+    "وعليكم السلام": "and upon you peace",
+    
+    # === Special Supplications ===
+    "دعاء كميل": "Dua Kumayl",
+    "دعاء التوسل": "Dua Tawassul",
+    "دعاء الفرج": "Dua al-Faraj",
+    "دعاء الندبة": "Dua al-Nudba",
+    "دعاء عرفة": "Dua Arafah",
+    "دعاء الصباح": "Morning Supplication",
+    "دعاء السحر": "Pre-dawn Supplication",
+    "مناجاة الإمام علي": "Munajat of Imam Ali",
+    "زيارة عاشوراء": "Ziyarat Ashura",
+    "زيارة الجامعة": "Ziyarat al-Jami'ah",
+    "زيارة آل ياسين": "Ziyarat Aal-Yasin",
+    "الصحيفة السجادية": "Sahifa Sajjadiyya",
+}
+
+# =============================================================================
+# SECTION 9: DIALECTS
+# =============================================================================
+
+LEBANESE_DIALECT = {
+    "كيفك": "how are you",
+    "منيح": "good/well",
+    "مليح": "good",
+    "كتير": "very/much",
+    "هلق": "now",
+    "هلأ": "now",
+    "شو": "what",
+    "ليش": "why",
+    "وين": "where",
+    "هيدا": "this (m)",
+    "هيدي": "this (f)",
+    "هودي": "these",
+    "يلا": "let's go",
+    "خلص": "enough/done",
+    "بس": "just/only/but",
+    "طيب": "okay",
+    "حبيبي": "my dear (m)",
+    "حبيبتي": "my dear (f)",
+    "الله يعطيك العافية": "may Allah give you strength",
+    "تكرم": "you're welcome",
+    "ما في": "there isn't",
+    "في": "there is",
+    "بدي": "I want",
+    "بدك": "you want",
+    "رح": "will/going to",
+    "عم": "currently",
+    "مش": "not",
+    "هيك": "like this",
+    "إجا": "came",
+    "راح": "went",
+    "هلق شو": "so what now",
+    "معلم": "boss/skilled one",
+    "قبضاي": "tough guy",
+    "زعران": "troublemakers",
+    "شباب": "guys",
+    "صبايا": "girls",
+    "أخي": "brother",
+    "ختي": "sister",
+}
+
+IRAQI_DIALECT = {
+    "شلونك": "how are you (m)",
+    "شلونج": "how are you (f)",
+    "زين": "good/fine",
+    "هسة": "now",
+    "هسع": "now",
+    "شكو ماكو": "what's up",
+    "ماكو": "there isn't",
+    "أكو": "there is",
+    "شنو": "what",
+    "ليش": "why",
+    "وين": "where",
+    "شلون": "how",
+    "آني": "I",
+    "إنت": "you (m)",
+    "إنتي": "you (f)",
+    "اهو": "he",
+    "اهي": "she",
+    "چا": "so/then",
+    "چان": "was",
+    "گال": "said",
+    "گلت": "I said",
+    "يگول": "he says",
+    "أريد": "I want",
+    "عدي": "I have",
+    "عدك": "you have",
+    "شوكت": "when",
+    "هواية": "a lot",
+    "خوش": "good/nice",
+    "باقي": "still",
+    "حيل": "very",
+    "كلش": "very",
+    "يمعود": "hey man",
+    "بيا": "hey (f)",
+    "عمي": "uncle/sir",
+    "خالو": "uncle",
+    "ياخي": "brother",
+    "ابن الحلال": "good person",
+    "ابن الگحبة": "son of a... (insult)",
+    "زنگين": "rich",
+    "فقير": "poor",
+}
+
+GULF_DIALECT = {
+    "شخبارك": "what's your news",
+    "شلونك": "how are you",
+    "زين": "good",
+    "الحين": "now",
+    "شو": "what",
+    "ليش": "why",
+    "وين": "where",
+    "جيف": "how",
+    "أبي": "I want",
+    "أبغى": "I want",
+    "تبي": "you want",
+    "ما": "not",
+    "مو": "not",
+    "مب": "not",
+    "مافي": "there isn't",
+    "جذي": "like this",
+    "كذا": "like this",
+    "وايد": "a lot",
+    "مرة": "very",
+    "يله": "let's go",
+    "خلاص": "enough",
+    "عيل": "then",
+    "يالله": "let's go",
+    "يا ولد": "hey boy",
+    "يا بنت": "hey girl",
+    "طال عمرك": "may your life be long",
+    "حياك الله": "may Allah greet you",
+    "الله يعافيك": "may Allah give you health",
+    "تسلم": "bless you",
+    "مشكور": "thank you",
+}
+
+EGYPTIAN_DIALECT = {
+    "إزيك": "how are you (m)",
+    "إزيك": "how are you (f)",
+    "كويس": "good (m)",
+    "كويسة": "good (f)",
+    "تمام": "perfect",
+    "دلوقتي": "now",
+    "إيه": "what",
+    "ليه": "why",
+    "فين": "where",
+    "إزاي": "how",
+    "ده": "this (m)",
+    "دي": "this (f)",
+    "دول": "these",
+    "عايز": "wanting (m)",
+    "عايزة": "wanting (f)",
+    "مش": "not",
+    "مفيش": "there isn't",
+    "فيه": "there is",
+    "كده": "like this",
+    "أوي": "very",
+    "قوي": "very/strong",
+    "طب": "okay",
+    "يعني": "I mean",
+    "خلاص": "enough",
+    "بقى": "then/so",
+    "حاجة": "thing",
+    "عمال": "currently",
+    "هيبقى": "will become",
+    "جه": "came",
+    "راح": "went",
+    "قال": "said",
+    "يابني": "hey son",
+    "يابنتي": "hey daughter",
+    "يالهوي": "oh my",
+    "ياريت": "I wish",
+}
+
+# =============================================================================
+# SECTION 10: PROVERBS & IDIOMS
+# =============================================================================
+
+PROVERBS_IDIOMS = {
+    # === Common Proverbs ===
+    "الصبر مفتاح الفرج": "Patience is the key to relief",
+    "من جد وجد": "Who strives, succeeds",
+    "العلم نور": "Knowledge is light",
+    "الطيور على أشكالها تقع": "Birds of a feather flock together",
+    "الصديق وقت الضيق": "A friend in need is a friend indeed",
+    "الجار قبل الدار": "The neighbor before the house",
+    "خير الكلام ما قل ودل": "Best speech is brief and to the point",
+    "يد واحدة ما تصفق": "One hand cannot clap",
+    "رب ضارة نافعة": "Many a harm brings benefit",
+    "إن غداً لناظره قريب": "Tomorrow is near for those who wait",
+    "أهل مكة أدرى بشعابها": "People of Mecca know its paths",
+    "الوقت كالسيف": "Time is like a sword",
+    "من طلب العلا سهر الليالي": "Who seeks greatness stays up nights",
+    "اتق شر من أحسنت إليه": "Beware those you've been kind to",
+    "ما كل ما يتمنى المرء يدركه": "Not all one wishes is attained",
+    "لا تؤجل عمل اليوم إلى الغد": "Don't delay today's work",
+    "درهم وقاية خير من قنطار علاج": "Prevention is better than cure",
+    
+    # === Idiomatic Expressions ===
+    "يضرب عصفورين بحجر": "kills two birds with one stone",
+    "نقطة في بحر": "a drop in the ocean",
+    "قلبه أبيض": "his heart is white (pure)",
+    "خفيف الدم": "light-blooded (likeable)",
+    "ثقيل الدم": "heavy-blooded (annoying)",
+    "على رأسي": "on my head (gladly)",
+    "على عيني": "on my eye (with pleasure)",
+    "الله يرحمه": "may Allah have mercy on him",
+    "الله يطول بعمرك": "may Allah lengthen your life",
+    "عقبال عندك": "may it happen for you too",
+    "مبروك": "congratulations",
+    "بالتوفيق": "good luck",
+    "لا سمح الله": "God forbid",
+    "يا ستار": "O Concealer!",
+    "يا لطيف": "O Gentle One!",
+    "ما في مشكلة": "no problem",
+    "تحت أمرك": "at your service",
+    "كله تمام": "everything is fine",
+    "حياك الله": "may Allah greet you",
+    "الله أعلم": "Allah knows best",
+    "بإذن الله": "by Allah's permission",
+    "توكلنا على الله": "we place our trust in Allah",
+    "ولله الحمد": "and praise be to Allah",
+    "بفضل الله": "by Allah's grace",
+    "ربنا يستر": "may our Lord protect",
+}
+
+# =============================================================================
+# SECTION 11: NAME TRANSLITERATIONS
+# =============================================================================
+
+NAME_TRANSLITERATIONS = {
+    # === Male Names ===
+    "محمد": "Muhammad",
+    "أحمد": "Ahmad",
+    "علي": "Ali",
+    "حسن": "Hassan",
+    "حسين": "Hussein",
+    "عباس": "Abbas",
+    "جعفر": "Ja'far",
+    "صادق": "Sadiq",
+    "كاظم": "Kadhim",
+    "رضا": "Ridha",
+    "مهدي": "Mahdi",
+    "هادي": "Hadi",
+    "باقر": "Baqir",
+    "عمر": "Umar",
+    "عثمان": "Uthman",
+    "خالد": "Khalid",
+    "طارق": "Tariq",
+    "مصطفى": "Mustafa",
+    "يوسف": "Yusuf",
+    "إبراهيم": "Ibrahim",
+    "إسماعيل": "Ismail",
+    "عبد الله": "Abdullah",
+    "عبد الرحمن": "Abdulrahman",
+    "عبد العزيز": "Abdulaziz",
+    "كريم": "Karim",
+    "رشيد": "Rashid",
+    "سلمان": "Salman",
+    "ناصر": "Nasir",
+    "منصور": "Mansour",
+    "حمزة": "Hamza",
+    "زيد": "Zayd",
+    "وليد": "Walid",
+    "بلال": "Bilal",
+    "عمران": "Imran",
+    "هارون": "Harun",
+    
+    # === Female Names ===
+    "فاطمة": "Fatimah",
+    "خديجة": "Khadijah",
+    "عائشة": "Aisha",
+    "زينب": "Zainab",
+    "مريم": "Maryam",
+    "آسية": "Asiya",
+    "سارة": "Sarah",
+    "ليلى": "Layla",
+    "سكينة": "Sakina",
+    "رقية": "Ruqayya",
+    "أم كلثوم": "Umm Kulthum",
+    "نورة": "Noura",
+    "هدى": "Huda",
+    "ريم": "Reem",
+    "نور": "Noor",
+    "زهرة": "Zahra",
+    "ياسمين": "Yasmin",
+    "جميلة": "Jamila",
+    "حنان": "Hanan",
+}
+
+# =============================================================================
+# SECTION 12: WHISPER TRANSCRIPTION CORRECTIONS
+# =============================================================================
+
+WHISPER_CORRECTIONS = {
+    # === Common Mishearings ===
+    "بسملة": "بسم الله",
+    "حوسين": "الحسين",
+    "يالعباس": "يا العباس",
+    "يحسين": "يا حسين",
+    "ياعلي": "يا علي",
+    "يامهدي": "يا مهدي",
+    "يازهراء": "يا زهراء",
+    "يافاطمة": "يا فاطمة",
+    "اللة": "الله",
+    "اللـه": "الله",
+    "محمود": "محمد",  # often confused
+    "ابراهيم": "إبراهيم",
+    "اسماعيل": "إسماعيل",
+    "اسحق": "إسحاق",
+    "ايش": "إيش",
+    "شوو": "شو",
+    "ازاي": "إزاي",
+    "كدا": "كده",
+    "كدة": "كده",
+    
+    # === Common Whisper Hallucinations ===
+    # These are phrases Whisper sometimes adds that aren't in the audio
+    "Thank you": "",
+    "Thanks for watching": "",
+    "subscribe": "",
+    "السبسكرايب": "",
+    "لايك": "",
+}
+
+# =============================================================================
+# SECTION 13: COMBINED GLOSSARY
+# =============================================================================
+
+ARABIC_GLOSSARY = {
+    **KARBALA_ASHURA,
+    **KARBALA_FIGURES,
+    **POLITICAL_RESISTANCE,
+    **NASHEED_DEVOTIONAL,
+    **POETIC_RHETORICAL,
+    **ISLAMIC_GENERAL,
+    **PROPHETS_FIGURES,
+    **PRAYER_WORSHIP,
+    **LEBANESE_DIALECT,
+    **IRAQI_DIALECT,
+    **GULF_DIALECT,
+    **EGYPTIAN_DIALECT,
+    **PROVERBS_IDIOMS,
+    **NAME_TRANSLITERATIONS,
+}
+
+# =============================================================================
+# SECTION 14: TRANSLATION FIX PATTERNS (REGEX)
+# =============================================================================
+
+TRANSLATION_FIXES: List[Tuple[str, str]] = [
+    # ===== CRITICAL: Nasheed-specific fixes =====
+    
+    # Gender mistranslations (common in poetry)
+    (r'\bgirl went to war\b', 'young warrior went to war'),
+    (r'\bshe rushed into battle\b', 'he rushed into battle'),
+    (r'\bthe girl attacked\b', 'the youth attacked'),
+    (r'\bshe charged\b', 'he charged'),
+    (r'\bher sword\b', 'his sword'),
+    (r'\bshe martyred\b', 'he was martyred'),
+    
+    # Common NLLB/Whisper nonsense for nasheeds
     (r'Razaf al-Nusra.*?Makkah', 'played victory as a melody'),
     (r'two planes', 'who'),
     (r'rear wheel', 'cast from the Champion'),
-    (r'Eden\b', 'our enemies'),
+    (r'\bEden\b(?! [Gg]arden)', 'our enemies'),
     (r'\bEmeralds?\b', 'He roared'),
+    (r'played(?:\s+\w+){0,3}\s+melody', 'resounded with victory'),
     
-    # Fix name transliterations
+    # Karbala-specific mistranslations
+    (r'\bthe tents caught fire\b', 'the tents were set ablaze'),
+    (r'\bI am thirsty\b', 'they are thirsty'),  # Context: children
+    (r'\bmy uncle\b(?=.*Abbas)', 'O my uncle (Abbas)'),
+    (r'\bthe carrier of water\b', 'the water-bearer'),
+    (r'\bskin of water\b', 'water skin'),
+    (r'\bthe horse\b(?=.*Hussein)', 'the steed'),
+    
+    # ===== Name Transliteration Fixes =====
     (r'\bHussain\b', 'Hussein'),
-    (r'\bZenb\b', 'Zainab'),
-    (r'\bAlawan\b', 'Alwan'),
-    (r'\bal-Kharar\b', 'al-Karrar (the Champion)'),
+    (r'\bHossein\b', 'Hussein'),
+    (r'\bHusain\b', 'Hussein'),
+    (r'\bHusayn\b', 'Hussein'),
+    (r'\bHoussein\b', 'Hussein'),
+    (r'\bZenab\b', 'Zainab'),
+    (r'\bZaynab\b', 'Zainab'),
+    (r'\bFatima\b', 'Fatimah'),
+    (r'\bKhadija\b', 'Khadijah'),
+    (r'\bAysha\b', 'Aisha'),
+    (r'\bMohamed\b', 'Muhammad'),
+    (r'\bMohammed\b', 'Muhammad'),
+    (r'\bMuhamad\b', 'Muhammad'),
+    (r'\bMuhamed\b', 'Muhammad'),
+    (r'\bAbbass\b', 'Abbas'),
+    (r'\bAl-Karar\b', 'Al-Karrar (the Champion)'),
+    (r'\bThe Karar\b', 'The Champion (Imam Ali)'),
+    (r'\bal-Kharar\b', 'al-Karrar'),
+    (r'\bKarrar\b', 'Karrar (the Champion)'),
+    
+    # ===== Religious Term Fixes =====
+    (r'\bIn sha Allah\b', 'Inshallah'),
+    (r'\bIn shaa Allah\b', 'Inshallah'),
+    (r'\bMasha Allah\b', "Masha'Allah"),
+    (r'\bMashallah\b', "Masha'Allah"),
+    (r'\bSubhan Allah\b', 'SubhanAllah'),
+    (r'\bAllah Akbar\b', 'Allahu Akbar'),
+    (r'\bJazak Allah\b', 'JazakAllah Khair'),
+    
+    # ===== Place Name Fixes =====
+    (r'\bKerbala\b', 'Karbala'),
+    (r'\bKerbela\b', 'Karbala'),
+    (r'\bKarbalaa\b', 'Karbala'),
+    (r'\bMakkah\b', 'Mecca'),
+    (r'\bMadinah\b', 'Medina'),
+    (r'\bNajef\b', 'Najaf'),
+    (r'\bQum\b', 'Qom'),
+    (r'\bMashaad\b', 'Mashhad'),
+    (r'\bSamara\b', 'Samarra'),
+    
+    # ===== Title/Honorific Fixes =====
+    (r'\bPBUH\b', '(peace be upon him)'),
+    (r'\bSAW\b', '(peace be upon him and his family)'),
+    (r'\bSWT\b', '(glory be to Him)'),
+    (r'\bRA\b', '(may Allah be pleased with him)'),
+    (r'\bAS\b', '(peace be upon him)'),
+    
+    # ===== Shia-Specific Fixes =====
+    (r'\bImam Hussain\b', 'Imam Hussein'),
+    (r'\bAhl ul-Bayt\b', 'Ahl al-Bayt'),
+    (r'\bAhlulbayt\b', 'Ahl al-Bayt'),
+    (r'\bAhl-ul-Bait\b', 'Ahl al-Bayt'),
+    (r'\bZiarat\b', 'Ziyarat'),
+    (r'\bAshoora\b', 'Ashura'),
+    (r'\bAshooraa\b', 'Ashura'),
+    (r'\bArbaeen\b', "Arba'een"),
+    (r'\bArbain\b', "Arba'een"),
+    (r'\bMoharram\b', 'Muharram'),
+    
+    # ===== Political/Resistance Fixes =====
+    (r'\bHizballah\b', 'Hezbollah'),
+    (r'\bHizbullah\b', 'Hezbollah'),
+    (r'\bHizb Allah\b', 'Hezbollah'),
+    (r'\bSayed\b', 'Sayyid'),
+    (r'\bSayyed\b', 'Sayyid'),
+    (r'\bNasrullah\b', 'Nasrallah'),
+    (r'\bKhamenai\b', 'Khamenei'),
+    (r'\bKhomeni\b', 'Khomeini'),
+    (r'\bSulemani\b', 'Soleimani'),
+    (r'\bSulaimani\b', 'Soleimani'),
+    (r'\bQuds force\b', 'Quds Force'),
+    (r'\bIRGC\b', 'IRGC (Revolutionary Guard)'),
+    
+    # ===== Common Article Issues =====
+    (r'\bthe Al\b', 'Al'),
+    (r'\bthe al-\b', 'al-'),
+    (r'\bThe al-\b', 'Al-'),
+    
+    # ===== Whisper Hallucination Removal =====
+    (r'^Thank you\.?\s*$', ''),
+    (r'^Thanks for watching\.?\s*$', ''),
+    (r'^\[Music\]\s*', ''),
+    (r'\[Music\]', '♪'),
+    (r'\[Applause\]', ''),
+    (r'^\s*you\s*$', ''),
+    
+    # ===== Poetic/Rhetorical Fixes =====
+    (r'\bO Hussein\b', 'O Hussein!'),
+    (r'\bO Abbas\b', 'O Abbas!'),
+    (r'\bO Ali\b', 'O Ali!'),
+    (r'\bO my master\b', 'O my master!'),
+    (r'\bO my lord\b', 'O my lord!'),
+    (r'\bAt your service\b', 'At your service!'),
+    (r'\bHere I am\b', 'Here I am!'),
+    
+    # ===== Dialect-to-Standard =====
+    (r'\bwallah\b', 'by Allah'),
+    (r'\bWallahi\b', 'By Allah'),
+    (r'\byalla\b', "let's go"),
+    (r'\bYalla\b', "Let's go"),
+    (r'\bhabibi\b', 'my dear'),
+    (r'\bHabibi\b', 'My dear'),
+    
+    # ===== Flow/Punctuation Improvements =====
+    (r'([.!?])\s*([a-z])', r'\1 \2'),  # Ensure space after punctuation
+    (r'\s+', ' '),  # Collapse multiple spaces
 ]
 
-import re
+# =============================================================================
+# SECTION 15: CONTEXT DETECTION KEYWORDS
+# =============================================================================
+
+CONTEXT_KEYWORDS = {
+    "karbala": [
+        'الحسين', 'حسين', 'كربلاء', 'عاشوراء', 'العباس', 'الطف',
+        'الفرات', 'يزيد', 'الشهداء', 'زينب', 'السبي', 'الخيام',
+        'الشمر', 'ابن زياد', 'علي الأكبر', 'الرضيع', 'المقتل',
+        'الطفوف', 'كرب وبلاء', 'المحرم', 'عاشوراء', 'الأربعين'
+    ],
+    "shia": [
+        'أهل البيت', 'الأئمة', 'المهدي', 'الغيبة', 'المعصوم',
+        'يا علي', 'يا حسين', 'يا زهراء', 'الكرار', 'أمير المؤمنين',
+        'الحوزة', 'المرجع', 'التقليد', 'زيارة', 'الإمام الصادق'
+    ],
+    "resistance": [
+        'المقاومة', 'حزب الله', 'الحشد', 'الجهاد', 'فلسطين',
+        'القدس', 'الأقصى', 'الاحتلال', 'الصهيوني', 'الشهيد',
+        'المجاهدين', 'النصر', 'التحرير', 'السيد', 'القائد'
+    ],
+    "nasheed": [
+        'نشيد', 'قصيدة', 'لطمية', 'رادود', 'منشد', 'مديح',
+        'يا رسول الله', 'صلوات', 'اللهم صل', 'فداك', 'لبيك'
+    ],
+    "religious": [
+        'بسم الله', 'الحمد لله', 'سبحان الله', 'الله أكبر',
+        'صلى الله عليه', 'النبي', 'الرسول', 'القرآن', 'الصلاة'
+    ],
+}
+
+# =============================================================================
+# SECTION 16: UTILITY FUNCTIONS
+# =============================================================================
 
 def apply_glossary_to_arabic(text: str) -> str:
-    """Pre-process Arabic text to normalize terms."""
-    # Could add normalization here
-    return text
+    """Pre-process Arabic text to normalize and correct common issues."""
+    result = text
+    
+    # Apply Whisper corrections
+    for wrong, correct in WHISPER_CORRECTIONS.items():
+        result = result.replace(wrong, correct)
+    
+    # Remove tatweel (kashida)
+    result = result.replace('ـ', '')
+    
+    # Normalize common variations (optional - may affect accuracy)
+    # result = re.sub(r'[إأآا]', 'ا', result)  # Normalize alef
+    # result = re.sub(r'[يى]', 'ي', result)    # Normalize yaa
+    
+    return result
+
 
 def fix_translation(english_text: str) -> str:
     """Post-process English translation to fix common errors."""
@@ -78,18 +1927,141 @@ def fix_translation(english_text: str) -> str:
     for pattern, replacement in TRANSLATION_FIXES:
         result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
     
+    # Clean up spacing
+    result = re.sub(r'\s+', ' ', result)
+    result = result.strip()
+    
     return result
 
+
+def detect_content_domain(text: str) -> str:
+    """Detect content domain from Arabic text."""
+    text_lower = text.lower() if text.isascii() else text
+    
+    # Check each domain's keywords
+    scores = {}
+    for domain, keywords in CONTEXT_KEYWORDS.items():
+        scores[domain] = sum(1 for kw in keywords if kw in text)
+    
+    # Return highest scoring domain
+    if max(scores.values()) > 0:
+        return max(scores, key=scores.get)
+    return "general"
+
+
 def get_context_prompt(domain: str = "general") -> str:
-    """Get context for translation based on domain."""
+    """Get translation context based on detected domain."""
     contexts = {
-        "religious": (
-            "This is Islamic religious content, likely a nasheed (religious song) "
-            "or poetry about Imam Hussein, Karbala, or Shia Islamic themes. "
-            "Translate with appropriate religious terminology."
+        "karbala": (
+            "This is content about the Battle of Karbala (680 CE). "
+            "Imam Hussein and 72 companions were martyred by Yazid's army. "
+            "Key figures: Imam Hussein (grandson of Prophet), Abbas (water-bearer), "
+            "Ali Akbar, Ali Asghar (infant), Zainab (Hussein's sister). "
+            "The Euphrates was blocked. Translate with gravity and emotional depth. "
+            "Keep vocative 'ya' as 'O' (e.g., Ya Hussein → O Hussein!)."
         ),
-        "news": "This is news content. Translate formally and accurately.",
-        "casual": "This is casual conversation. Translate naturally.",
+        "shia": (
+            "This is Shia Islamic content. Central figures: Prophet Muhammad, "
+            "Imam Ali (Commander of the Faithful), Fatimah al-Zahra, "
+            "and the Twelve Imams. May relate to Karbala, mourning traditions, "
+            "or religious supplications. Preserve honorifics and emotional depth."
+        ),
+        "resistance": (
+            "This is content related to Islamic resistance movements. "
+            "May reference Hezbollah, Palestinian cause, or Axis of Resistance. "
+            "Key terms: martyrdom, jihad, steadfastness, victory, liberation. "
+            "Translate political/religious terminology accurately."
+        ),
+        "nasheed": (
+            "This is a nasheed (Islamic religious song/chant). "
+            "Contains poetic language, metaphors, religious symbolism. "
+            "Preserve poetic flow. Keep 'Allahu Akbar' etc. untranslated. "
+            "Translate 'ya' as 'O' in vocative constructions."
+        ),
+        "religious": (
+            "This is Islamic religious content. Use appropriate terminology. "
+            "Preserve Arabic phrases like 'Bismillah', 'Alhamdulillah'. "
+            "Translate formally with proper Islamic vocabulary."
+        ),
+        "religious_sunni": (
+            "This is Sunni Islamic content. Use standard Sunni terminology. "
+            "Prophet Muhammad (PBUH) and the four Rightly Guided Caliphs are central."
+        ),
+        "lebanese": (
+            "This is Lebanese Arabic dialect. May include French loanwords. "
+            "Translate naturally while preserving cultural context."
+        ),
+        "iraqi": (
+            "This is Iraqi Arabic dialect. May include Persian/Turkish loanwords. "
+            "Common in Shia religious content."
+        ),
+        "egyptian": "This is Egyptian Arabic dialect. Translate naturally.",
+        "gulf": "This is Gulf Arabic dialect (Khaleeji). Translate naturally.",
         "general": "",
     }
     return contexts.get(domain, "")
+
+
+def get_glossary_term(arabic_term: str) -> Optional[str]:
+    """Look up an Arabic term in the glossary."""
+    return ARABIC_GLOSSARY.get(arabic_term)
+
+
+def get_term_count() -> int:
+    """Return total number of glossary terms."""
+    return len(ARABIC_GLOSSARY)
+
+
+def get_section_counts() -> Dict[str, int]:
+    """Return term counts by section."""
+    return {
+        "karbala_ashura": len(KARBALA_ASHURA),
+        "karbala_figures": len(KARBALA_FIGURES),
+        "political_resistance": len(POLITICAL_RESISTANCE),
+        "nasheed_devotional": len(NASHEED_DEVOTIONAL),
+        "poetic_rhetorical": len(POETIC_RHETORICAL),
+        "islamic_general": len(ISLAMIC_GENERAL),
+        "prophets_figures": len(PROPHETS_FIGURES),
+        "prayer_worship": len(PRAYER_WORSHIP),
+        "lebanese_dialect": len(LEBANESE_DIALECT),
+        "iraqi_dialect": len(IRAQI_DIALECT),
+        "gulf_dialect": len(GULF_DIALECT),
+        "egyptian_dialect": len(EGYPTIAN_DIALECT),
+        "proverbs_idioms": len(PROVERBS_IDIOMS),
+        "name_transliterations": len(NAME_TRANSLITERATIONS),
+    }
+
+
+# =============================================================================
+# SECTION 17: GLOSSARY SECTIONS EXPORT
+# =============================================================================
+
+GLOSSARY_SECTIONS = {
+    "karbala_ashura": KARBALA_ASHURA,
+    "karbala_figures": KARBALA_FIGURES,
+    "political_resistance": POLITICAL_RESISTANCE,
+    "nasheed_devotional": NASHEED_DEVOTIONAL,
+    "poetic_rhetorical": POETIC_RHETORICAL,
+    "islamic_general": ISLAMIC_GENERAL,
+    "prophets_figures": PROPHETS_FIGURES,
+    "prayer_worship": PRAYER_WORSHIP,
+    "lebanese_dialect": LEBANESE_DIALECT,
+    "iraqi_dialect": IRAQI_DIALECT,
+    "gulf_dialect": GULF_DIALECT,
+    "egyptian_dialect": EGYPTIAN_DIALECT,
+    "proverbs_idioms": PROVERBS_IDIOMS,
+    "name_transliterations": NAME_TRANSLITERATIONS,
+}
+
+
+if __name__ == "__main__":
+    print("Arabic-English Glossary Statistics")
+    print("=" * 50)
+    print(f"Total terms: {get_term_count()}")
+    print(f"Translation fix patterns: {len(TRANSLATION_FIXES)}")
+    print(f"Whisper corrections: {len(WHISPER_CORRECTIONS)}")
+    print(f"Context detection categories: {len(CONTEXT_KEYWORDS)}")
+    print()
+    print("Section breakdown:")
+    for name, count in get_section_counts().items():
+        print(f"  {name}: {count}")

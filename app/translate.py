@@ -1,20 +1,25 @@
 """
-Arabic to English translation using local transformer models.
+Arabic to English translation with multiple backends.
 
-Supports multiple translation backends:
-- NLLB-200 (recommended): Meta's multilingual model with excellent Arabic support
-- MarianMT: Lighter alternative for faster processing
+Supports:
+- NLLB-200: Neural MT (fast, basic quality)
+- LLM: Large language model translation (Ollama, OpenAI, Anthropic)
+- Two-pass: NLLB first, then LLM refinement (best quality)
 
 Example:
     >>> from app.translate import create_translator
-    >>> translator = create_translator(model="nllb")
-    >>> result = translator.translate("مرحبا بالعالم")
-    >>> print(result.translated)  # "Hello World"
+    >>> translator = create_translator(backend="two_pass", llm_provider="ollama")
+    >>> result = translator.translate("عزف النصر مقاما", domain="religious")
+    >>> print(result.translated)  # "played victory as a melody"
 """
 
 import os
-from typing import List, Dict, Any, Optional, Callable
+import json
+import time
+import logging
+from typing import List, Dict, Any, Optional, Callable, Literal
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 
 import torch
 from transformers import (
@@ -26,40 +31,104 @@ from transformers import (
 from tqdm import tqdm
 
 from .config import get_config
-from .glossary import fix_translation, apply_glossary_to_arabic
+from .glossary import fix_translation, apply_glossary_to_arabic, get_context_prompt
+
+logger = logging.getLogger(__name__)
+
+# Domain-specific system prompts for LLM translation
+DOMAIN_PROMPTS = {
+    "religious": """You are an expert translator specializing in Arabic Islamic religious content.
+You are translating nasheeds (religious songs), poetry, and devotional content about:
+- Imam Hussein and the tragedy of Karbala
+- Shia Islamic themes and commemorations  
+- Religious figures: the Prophet Muhammad, Imam Ali (al-Karrar), Abbas, Zainab
+- Concepts: martyrdom (shahada), sacrifice, devotion, lamentation
+
+Key terminology to use correctly:
+- الكرار = al-Karrar (the Champion), refers to Imam Ali
+- شبل = lion cub (term for young warriors)
+- الميدان = battlefield
+- عزف = played (music), as in "played a melody"
+- مقام = maqam (musical mode/melody), or spiritual station
+- كربلاء = Karbala
+- الطف = Taff (another name for Karbala)
+
+Translate to preserve:
+1. Religious and poetic meaning
+2. Emotional resonance
+3. Proper Islamic terminology in English
+4. Natural English flow while respecting the original's poetry""",
+
+    "political": """You are an expert translator specializing in Arabic political speeches and rhetoric.
+You are translating political content from the Middle East, including:
+- Resistance movement speeches and statements
+- Political leaders' addresses
+- Commentary on regional conflicts
+- Hezbollah, Hamas, and allied movement communications
+
+Key terminology:
+- المقاومة = the Resistance
+- الممانعة = the Resistance Axis / steadfastness
+- الصمود = steadfastness, resilience
+- التحرير = liberation
+- الاحتلال = occupation
+- الكيان = "the entity" (referring to Israel)
+- المجاهدين = the fighters/mujahideen
+- الشهداء = martyrs
+- النصر = victory
+- العدو = the enemy
+
+Translate to preserve:
+1. Political rhetoric and persuasive tone
+2. Proper movement/organization names
+3. Regional political terminology
+4. The speaker's intended emotional impact""",
+
+    "news": """You are translating Arabic news content to English.
+Use formal, journalistic language. Be accurate and neutral.
+Preserve proper nouns and place names correctly.""",
+
+    "casual": """You are translating casual Arabic conversation to natural English.
+Use conversational, idiomatic English. Capture the tone and informality.""",
+
+    "general": """You are translating Arabic text to English.
+Provide an accurate, natural-sounding translation.""",
+}
 
 
 @dataclass
 class TranslationResult:
-    """
-    Result of a single translation operation.
-    
-    Attributes:
-        original: Original Arabic text
-        translated: Translated English text
-        model_used: Name/path of the model used
-    """
+    """Result of a single translation operation."""
     original: str
     translated: str
     model_used: str
+    backend: str = "nllb"
+    refined: bool = False
 
 
-class ArabicTranslator:
-    """
-    Translates Arabic text to English using local transformer models.
+class TranslationBackend(ABC):
+    """Abstract base class for translation backends."""
     
-    Supports:
-    - NLLB-200 (facebook/nllb-200-distilled-600M): Good balance of quality and speed
-    - NLLB-200 Large (facebook/nllb-200-1.3B): Better quality, more resources
-    - MarianMT (Helsinki-NLP/opus-mt-ar-en): Lightweight and fast
+    @abstractmethod
+    def translate(self, text: str, domain: str = "general") -> str:
+        """Translate Arabic text to English."""
+        pass
     
-    Example:
-        >>> translator = ArabicTranslator(model_name="nllb")
-        >>> result = translator.translate("كيف حالك؟")
-        >>> print(result.translated)  # "How are you?"
-    """
+    @abstractmethod
+    def translate_batch(self, texts: List[str], domain: str = "general") -> List[str]:
+        """Translate multiple texts."""
+        pass
     
-    # Supported model shortcuts and their HuggingFace paths
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Backend identifier."""
+        pass
+
+
+class NLLBBackend(TranslationBackend):
+    """NLLB-200 neural machine translation backend."""
+    
     MODELS = {
         "nllb": "facebook/nllb-200-distilled-600M",
         "nllb-large": "facebook/nllb-200-1.3B",
@@ -67,45 +136,27 @@ class ArabicTranslator:
         "marian": "Helsinki-NLP/opus-mt-ar-en",
     }
     
-    # NLLB language codes (BCP-47 style)
-    NLLB_ARABIC = "arb_Arab"   # Modern Standard Arabic (Arabic script)
-    NLLB_ENGLISH = "eng_Latn"  # English (Latin script)
+    NLLB_ARABIC = "arb_Arab"
+    NLLB_ENGLISH = "eng_Latn"
     
     def __init__(
         self,
-        model_name: Optional[str] = None,
+        model_name: str = "nllb",
         device: Optional[str] = None,
         progress_callback: Optional[Callable[[str], None]] = None
     ):
-        """
-        Initialize the translator with specified model.
-        
-        Args:
-            model_name: Model key ('nllb', 'nllb-large', 'marian') or HuggingFace path.
-                        If None, uses config default.
-            device: Compute device ('cuda', 'mps', 'cpu', or None for auto-detect)
-            progress_callback: Optional callback for progress/status messages
-        """
         self.progress_callback = progress_callback
         config = get_config()
         
-        # Resolve model name from config or argument
-        if model_name is None:
-            model_name = config.translation.model
-        
-        # Map shortcut to full path
         if model_name in self.MODELS:
             self.model_path = self.MODELS[model_name]
             self.model_type = "nllb" if "nllb" in model_name else "marian"
         else:
-            # Assume it's a full HuggingFace path
             self.model_path = model_name
             self.model_type = "nllb" if "nllb" in model_name.lower() else "marian"
         
-        # Auto-detect device
         if device is None:
             device = config.translation.device
-        
         if device is None:
             if torch.cuda.is_available():
                 device = "cuda"
@@ -118,59 +169,405 @@ class ArabicTranslator:
         self.batch_size = config.translation.batch_size
         self.max_length = config.translation.max_length
         
-        self._log(f"Loading translation model: {self.model_path}")
-        self._log(f"Using device: {self.device}")
-        
-        # Load model and tokenizer
+        self._log(f"Loading NLLB model: {self.model_path}")
         self._load_model()
     
     def _log(self, message: str) -> None:
-        """Log a progress message via callback if available."""
         if self.progress_callback:
             self.progress_callback(message)
     
     def _load_model(self) -> None:
-        """Load the translation model and tokenizer from HuggingFace."""
         config = get_config()
         cache_dir = config.translation.model_cache_dir
         
         if self.model_type == "marian":
-            self.tokenizer = MarianTokenizer.from_pretrained(
-                self.model_path,
-                cache_dir=cache_dir
-            )
-            self.model = MarianMTModel.from_pretrained(
-                self.model_path,
-                cache_dir=cache_dir
-            )
+            self.tokenizer = MarianTokenizer.from_pretrained(self.model_path, cache_dir=cache_dir)
+            self.model = MarianMTModel.from_pretrained(self.model_path, cache_dir=cache_dir)
         else:
-            # NLLB model
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
-                cache_dir=cache_dir
-            )
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(
-                self.model_path,
-                cache_dir=cache_dir
-            )
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, cache_dir=cache_dir)
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_path, cache_dir=cache_dir)
         
-        # Move model to device and set to evaluation mode
         self.model = self.model.to(self.device)
         self.model.eval()
+        self._log("NLLB model loaded")
+    
+    @property
+    def name(self) -> str:
+        return f"nllb:{self.model_path}"
+    
+    def translate(self, text: str, domain: str = "general") -> str:
+        if not text or not text.strip():
+            return ""
         
-        self._log("Translation model loaded successfully")
+        with torch.no_grad():
+            if self.model_type == "marian":
+                inputs = self.tokenizer(
+                    text, return_tensors="pt", padding=True,
+                    truncation=True, max_length=self.max_length
+                ).to(self.device)
+                outputs = self.model.generate(**inputs, max_length=self.max_length, num_beams=4)
+            else:
+                self.tokenizer.src_lang = self.NLLB_ARABIC
+                inputs = self.tokenizer(
+                    text, return_tensors="pt", padding=True,
+                    truncation=True, max_length=self.max_length
+                ).to(self.device)
+                forced_bos = self.tokenizer.convert_tokens_to_ids(self.NLLB_ENGLISH)
+                outputs = self.model.generate(
+                    **inputs, forced_bos_token_id=forced_bos,
+                    max_length=self.max_length, num_beams=4
+                )
+            
+            return self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+    
+    def translate_batch(self, texts: List[str], domain: str = "general") -> List[str]:
+        results = []
+        for i in range(0, len(texts), self.batch_size):
+            batch = texts[i:i + self.batch_size]
+            non_empty = [(idx, t) for idx, t in enumerate(batch) if t and t.strip()]
+            
+            batch_results = [""] * len(batch)
+            if not non_empty:
+                results.extend(batch_results)
+                continue
+            
+            indices, batch_texts = zip(*non_empty)
+            
+            with torch.no_grad():
+                if self.model_type == "marian":
+                    inputs = self.tokenizer(
+                        list(batch_texts), return_tensors="pt", padding=True,
+                        truncation=True, max_length=self.max_length
+                    ).to(self.device)
+                    outputs = self.model.generate(**inputs, max_length=self.max_length, num_beams=4)
+                else:
+                    self.tokenizer.src_lang = self.NLLB_ARABIC
+                    inputs = self.tokenizer(
+                        list(batch_texts), return_tensors="pt", padding=True,
+                        truncation=True, max_length=self.max_length
+                    ).to(self.device)
+                    forced_bos = self.tokenizer.convert_tokens_to_ids(self.NLLB_ENGLISH)
+                    outputs = self.model.generate(
+                        **inputs, forced_bos_token_id=forced_bos,
+                        max_length=self.max_length, num_beams=4
+                    )
+                
+                translations = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            
+            for idx, trans in zip(indices, translations):
+                batch_results[idx] = trans.strip()
+            results.extend(batch_results)
+        
+        return results
+
+
+class LLMBackend(TranslationBackend):
+    """LLM-based translation using Ollama, OpenAI, or Anthropic."""
+    
+    def __init__(
+        self,
+        provider: Literal["ollama", "openai", "anthropic"] = "ollama",
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None
+    ):
+        self.provider = provider
+        self.progress_callback = progress_callback
+        
+        # Set defaults based on provider
+        if provider == "ollama":
+            self.model = model or os.getenv("AVT_OLLAMA_MODEL", "llama3.2")
+            self.base_url = base_url or os.getenv("AVT_OLLAMA_HOST", "http://localhost:11434")
+            self.api_key = None
+        elif provider == "openai":
+            self.model = model or os.getenv("AVT_OPENAI_MODEL", "gpt-4o-mini")
+            self.base_url = base_url or "https://api.openai.com/v1"
+            self.api_key = api_key or os.getenv("AVT_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        elif provider == "anthropic":
+            self.model = model or os.getenv("AVT_ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+            self.base_url = base_url or "https://api.anthropic.com"
+            self.api_key = api_key or os.getenv("AVT_ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+        
+        self._log(f"Initialized LLM backend: {provider}/{self.model}")
+    
+    def _log(self, message: str) -> None:
+        if self.progress_callback:
+            self.progress_callback(message)
+        logger.info(message)
+    
+    @property
+    def name(self) -> str:
+        return f"llm:{self.provider}/{self.model}"
+    
+    def _call_ollama(self, prompt: str, system: str) -> str:
+        """Call Ollama API."""
+        import urllib.request
+        import urllib.error
+        
+        url = f"{self.base_url}/api/generate"
+        data = json.dumps({
+            "model": self.model,
+            "prompt": prompt,
+            "system": system,
+            "stream": False,
+            "options": {"temperature": 0.3}
+        }).encode('utf-8')
+        
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                return result.get("response", "").strip()
+        except urllib.error.URLError as e:
+            logger.error(f"Ollama error: {e}")
+            raise RuntimeError(f"Ollama request failed: {e}")
+    
+    def _call_openai(self, prompt: str, system: str) -> str:
+        """Call OpenAI-compatible API."""
+        import urllib.request
+        import urllib.error
+        
+        url = f"{self.base_url}/chat/completions"
+        data = json.dumps({
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.3
+        }).encode('utf-8')
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        req = urllib.request.Request(url, data=data, headers=headers)
+        
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                return result["choices"][0]["message"]["content"].strip()
+        except urllib.error.URLError as e:
+            logger.error(f"OpenAI error: {e}")
+            raise RuntimeError(f"OpenAI request failed: {e}")
+    
+    def _call_anthropic(self, prompt: str, system: str) -> str:
+        """Call Anthropic API."""
+        import urllib.request
+        import urllib.error
+        
+        url = f"{self.base_url}/v1/messages"
+        data = json.dumps({
+            "model": self.model,
+            "max_tokens": 1024,
+            "system": system,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode('utf-8')
+        
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01"
+        }
+        req = urllib.request.Request(url, data=data, headers=headers)
+        
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                return result["content"][0]["text"].strip()
+        except urllib.error.URLError as e:
+            logger.error(f"Anthropic error: {e}")
+            raise RuntimeError(f"Anthropic request failed: {e}")
+    
+    def _call_llm(self, prompt: str, system: str) -> str:
+        """Route to appropriate LLM provider."""
+        if self.provider == "ollama":
+            return self._call_ollama(prompt, system)
+        elif self.provider == "openai":
+            return self._call_openai(prompt, system)
+        elif self.provider == "anthropic":
+            return self._call_anthropic(prompt, system)
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+    
+    def translate(self, text: str, domain: str = "general") -> str:
+        if not text or not text.strip():
+            return ""
+        
+        system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
+        prompt = f"Translate this Arabic text to English. Output ONLY the translation, no explanations:\n\n{text}"
+        
+        try:
+            return self._call_llm(prompt, system)
+        except Exception as e:
+            logger.error(f"LLM translation failed: {e}")
+            return f"[Translation error: {e}]"
+    
+    def translate_batch(self, texts: List[str], domain: str = "general") -> List[str]:
+        """Translate texts one by one (LLMs don't batch well)."""
+        return [self.translate(t, domain) for t in texts]
+
+
+class TwoPassBackend(TranslationBackend):
+    """Two-pass translation: NLLB first, then LLM refinement."""
+    
+    def __init__(
+        self,
+        nllb_model: str = "nllb",
+        llm_provider: Literal["ollama", "openai", "anthropic"] = "ollama",
+        llm_model: Optional[str] = None,
+        device: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+        **llm_kwargs
+    ):
+        self.progress_callback = progress_callback
+        
+        self._log("Initializing two-pass translator...")
+        self.nllb = NLLBBackend(model_name=nllb_model, device=device, progress_callback=progress_callback)
+        self.llm = LLMBackend(
+            provider=llm_provider,
+            model=llm_model,
+            progress_callback=progress_callback,
+            **llm_kwargs
+        )
+    
+    def _log(self, message: str) -> None:
+        if self.progress_callback:
+            self.progress_callback(message)
+    
+    @property
+    def name(self) -> str:
+        return f"two_pass:{self.nllb.name}+{self.llm.name}"
+    
+    def translate(self, text: str, domain: str = "general") -> str:
+        if not text or not text.strip():
+            return ""
+        
+        # First pass: NLLB
+        nllb_translation = self.nllb.translate(text, domain)
+        
+        # Second pass: LLM refinement
+        system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
+        refine_prompt = f"""I have Arabic text and its machine translation. Please improve the translation.
+
+Original Arabic:
+{text}
+
+Machine translation (may have errors):
+{nllb_translation}
+
+Provide an improved, natural English translation. Output ONLY the translation:"""
+        
+        try:
+            refined = self.llm._call_llm(refine_prompt, system)
+            return refined
+        except Exception as e:
+            logger.warning(f"LLM refinement failed, using NLLB output: {e}")
+            return fix_translation(nllb_translation)
+    
+    def translate_batch(self, texts: List[str], domain: str = "general") -> List[str]:
+        # First pass all texts through NLLB (batched)
+        nllb_translations = self.nllb.translate_batch(texts, domain)
+        
+        # Second pass: refine each with LLM
+        results = []
+        for original, nllb_trans in zip(texts, nllb_translations):
+            if not original or not original.strip():
+                results.append("")
+                continue
+            
+            system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
+            refine_prompt = f"""I have Arabic text and its machine translation. Please improve the translation.
+
+Original Arabic:
+{original}
+
+Machine translation (may have errors):
+{nllb_trans}
+
+Provide an improved, natural English translation. Output ONLY the translation:"""
+            
+            try:
+                refined = self.llm._call_llm(refine_prompt, system)
+                results.append(refined)
+            except Exception as e:
+                logger.warning(f"LLM refinement failed: {e}")
+                results.append(fix_translation(nllb_trans))
+        
+        return results
+
+
+class ArabicTranslator:
+    """
+    Main translator class with multiple backend support.
+    
+    Example:
+        >>> translator = ArabicTranslator(backend="two_pass", llm_provider="ollama")
+        >>> result = translator.translate("كيف حالك؟", domain="casual")
+        >>> print(result.translated)  # "How are you?"
+    """
+    
+    def __init__(
+        self,
+        backend: Literal["nllb", "llm", "two_pass"] = "nllb",
+        model_name: Optional[str] = None,
+        device: Optional[str] = None,
+        llm_provider: Literal["ollama", "openai", "anthropic"] = "ollama",
+        llm_model: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+        **kwargs
+    ):
+        self.progress_callback = progress_callback
+        self.backend_type = backend
+        
+        # Get backend from environment if not specified
+        if backend == "nllb":
+            env_backend = os.getenv("AVT_TRANSLATION_BACKEND")
+            if env_backend in ("llm", "two_pass"):
+                backend = env_backend
+                self.backend_type = backend
+        
+        # Initialize the appropriate backend
+        if backend == "nllb":
+            self._backend = NLLBBackend(
+                model_name=model_name or "nllb",
+                device=device,
+                progress_callback=progress_callback
+            )
+        elif backend == "llm":
+            self._backend = LLMBackend(
+                provider=llm_provider,
+                model=llm_model,
+                progress_callback=progress_callback,
+                **kwargs
+            )
+        elif backend == "two_pass":
+            self._backend = TwoPassBackend(
+                nllb_model=model_name or "nllb",
+                llm_provider=llm_provider,
+                llm_model=llm_model,
+                device=device,
+                progress_callback=progress_callback,
+                **kwargs
+            )
+        else:
+            raise ValueError(f"Unknown backend: {backend}")
     
     def translate(
         self,
         text: str,
-        max_length: Optional[int] = None
+        domain: str = "general",
+        max_length: Optional[int] = None  # kept for API compatibility
     ) -> TranslationResult:
         """
-        Translate a single text from Arabic to English.
+        Translate Arabic text to English.
         
         Args:
             text: Arabic text to translate
-            max_length: Maximum output length (default from config)
+            domain: Content domain (religious, news, casual, general)
+            max_length: Ignored, kept for compatibility
             
         Returns:
             TranslationResult with original and translated text
@@ -179,80 +576,39 @@ class ArabicTranslator:
             return TranslationResult(
                 original=text,
                 translated="",
-                model_used=self.model_path
+                model_used=self._backend.name,
+                backend=self.backend_type
             )
         
-        if max_length is None:
-            max_length = self.max_length
+        translated = self._backend.translate(text, domain)
         
-        with torch.no_grad():
-            if self.model_type == "marian":
-                # MarianMT: straightforward encoding
-                inputs = self.tokenizer(
-                    text,
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True,
-                    max_length=max_length
-                ).to(self.device)
-                
-                outputs = self.model.generate(
-                    **inputs,
-                    max_length=max_length,
-                    num_beams=4,
-                    early_stopping=True
-                )
-            else:
-                # NLLB: requires source language specification
-                self.tokenizer.src_lang = self.NLLB_ARABIC
-                
-                inputs = self.tokenizer(
-                    text,
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True,
-                    max_length=max_length
-                ).to(self.device)
-                
-                # Force target language token
-                forced_bos = self.tokenizer.convert_tokens_to_ids(self.NLLB_ENGLISH)
-                
-                outputs = self.model.generate(
-                    **inputs,
-                    forced_bos_token_id=forced_bos,
-                    max_length=max_length,
-                    num_beams=4,
-                    early_stopping=True
-                )
-            
-            translated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        # Apply glossary fixes to improve translation quality
-        translated = fix_translation(translated.strip())
+        # Apply glossary fixes (always, as a safety net)
+        translated = fix_translation(translated)
         
         return TranslationResult(
             original=text,
             translated=translated,
-            model_used=self.model_path
+            model_used=self._backend.name,
+            backend=self.backend_type,
+            refined=(self.backend_type in ("llm", "two_pass"))
         )
     
     def translate_segments(
         self,
         segments: List[Dict[str, Any]],
+        domain: str = "general",
         show_progress: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Translate a list of transcription segments.
         
-        Preserves all segment metadata (timestamps, IDs) while adding translation.
-        
         Args:
             segments: List of segment dicts with 'text', 'start', 'end' keys
-            show_progress: Whether to show tqdm progress bar
+            domain: Content domain for translation context
+            show_progress: Whether to show progress bar
             
         Returns:
-            List of segments with 'text' replaced by translation and
-            'original_text' added with original Arabic
+            List of segments with translated text
         """
         translated_segments = []
         
@@ -262,10 +618,10 @@ class ArabicTranslator:
         
         for segment in iterator:
             original_text = segment.get("text", "")
-            result = self.translate(original_text)
+            result = self.translate(original_text, domain=domain)
             
             translated_segments.append({
-                **segment,  # Preserve all original fields
+                **segment,
                 "original_text": original_text,
                 "text": result.translated,
             })
@@ -275,131 +631,92 @@ class ArabicTranslator:
     def translate_batch(
         self,
         texts: List[str],
+        domain: str = "general",
         batch_size: Optional[int] = None,
         max_length: Optional[int] = None,
         show_progress: bool = True
     ) -> List[TranslationResult]:
         """
-        Translate multiple texts in batches for better efficiency.
-        
-        More efficient than calling translate() repeatedly for large lists.
+        Translate multiple texts.
         
         Args:
-            texts: List of Arabic texts to translate
-            batch_size: Batch size for inference (default from config)
-            max_length: Maximum output length (default from config)
-            show_progress: Whether to show progress bar
+            texts: List of Arabic texts
+            domain: Content domain for context
+            batch_size: Ignored (backend handles batching)
+            max_length: Ignored
+            show_progress: Whether to show progress
             
         Returns:
-            List of TranslationResult objects in same order as input
+            List of TranslationResult objects
         """
-        if batch_size is None:
-            batch_size = self.batch_size
-        if max_length is None:
-            max_length = self.max_length
-        
-        results = []
-        num_batches = (len(texts) + batch_size - 1) // batch_size
-        
-        iterator = range(0, len(texts), batch_size)
         if show_progress:
-            iterator = tqdm(iterator, total=num_batches, desc="Translating batches")
+            texts_iter = tqdm(texts, desc="Translating")
+            texts_list = list(texts_iter)
+        else:
+            texts_list = texts
         
-        for i in iterator:
-            batch = texts[i:i + batch_size]
-            
-            # Handle empty texts separately
-            non_empty = [(idx, t) for idx, t in enumerate(batch) if t and t.strip()]
-            
-            if not non_empty:
-                # All empty in this batch
-                results.extend([
-                    TranslationResult(t, "", self.model_path) for t in batch
-                ])
-                continue
-            
-            indices, batch_texts = zip(*non_empty)
-            
-            with torch.no_grad():
-                if self.model_type == "marian":
-                    inputs = self.tokenizer(
-                        list(batch_texts),
-                        return_tensors="pt",
-                        padding=True,
-                        truncation=True,
-                        max_length=max_length
-                    ).to(self.device)
-                    
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_length=max_length,
-                        num_beams=4,
-                        early_stopping=True
-                    )
-                else:
-                    self.tokenizer.src_lang = self.NLLB_ARABIC
-                    
-                    inputs = self.tokenizer(
-                        list(batch_texts),
-                        return_tensors="pt",
-                        padding=True,
-                        truncation=True,
-                        max_length=max_length
-                    ).to(self.device)
-                    
-                    forced_bos = self.tokenizer.convert_tokens_to_ids(self.NLLB_ENGLISH)
-                    
-                    outputs = self.model.generate(
-                        **inputs,
-                        forced_bos_token_id=forced_bos,
-                        max_length=max_length,
-                        num_beams=4,
-                        early_stopping=True
-                    )
-                
-                translations = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-            
-            # Map translations back to original positions
-            batch_results = [TranslationResult(t, "", self.model_path) for t in batch]
-            for idx, trans in zip(indices, translations):
-                batch_results[idx] = TranslationResult(
-                    batch[idx],
-                    trans.strip(),
-                    self.model_path
-                )
-            
-            results.extend(batch_results)
+        translations = self._backend.translate_batch(texts_list, domain)
         
-        return results
+        return [
+            TranslationResult(
+                original=orig,
+                translated=fix_translation(trans),
+                model_used=self._backend.name,
+                backend=self.backend_type
+            )
+            for orig, trans in zip(texts, translations)
+        ]
 
 
 def create_translator(
+    backend: Literal["nllb", "llm", "two_pass"] = "nllb",
     model: Optional[str] = None,
     device: Optional[str] = None,
-    progress_callback: Optional[Callable[[str], None]] = None
+    llm_provider: Literal["ollama", "openai", "anthropic"] = "ollama",
+    llm_model: Optional[str] = None,
+    progress_callback: Optional[Callable[[str], None]] = None,
+    **kwargs
 ) -> ArabicTranslator:
     """
     Factory function to create a translator instance.
     
-    Convenience wrapper around ArabicTranslator constructor.
-    
     Args:
-        model: Model name ('nllb', 'nllb-large', 'marian') or HuggingFace path
-        device: Device to use ('cuda', 'mps', 'cpu', or None for auto)
-        progress_callback: Optional progress callback function
+        backend: Translation backend ("nllb", "llm", "two_pass")
+        model: NLLB model name (for nllb/two_pass backends)
+        device: Device to use ('cuda', 'mps', 'cpu')
+        llm_provider: LLM provider ("ollama", "openai", "anthropic")
+        llm_model: Specific LLM model to use
+        progress_callback: Optional progress callback
         
     Returns:
         Configured ArabicTranslator instance
         
     Example:
-        >>> translator = create_translator(model="nllb")
-        >>> result = translator.translate("مرحبا")
-        >>> print(result.translated)
+        >>> # Simple NLLB (fast, basic quality)
+        >>> translator = create_translator(backend="nllb")
+        
+        >>> # LLM-based (good quality, needs Ollama running)
+        >>> translator = create_translator(
+        ...     backend="llm",
+        ...     llm_provider="ollama",
+        ...     llm_model="llama3.2"
+        ... )
+        
+        >>> # Two-pass (best quality for religious content)
+        >>> translator = create_translator(
+        ...     backend="two_pass",
+        ...     llm_provider="openai",
+        ...     llm_model="gpt-4o-mini"
+        ... )
     """
     return ArabicTranslator(
+        backend=backend,
         model_name=model,
         device=device,
-        progress_callback=progress_callback
+        llm_provider=llm_provider,
+        llm_model=llm_model,
+        progress_callback=progress_callback,
+        **kwargs
     )
 
 
@@ -407,22 +724,44 @@ def create_translator(
 if __name__ == "__main__":
     print("Testing Arabic-English translation...\n")
     
+    # Test with NLLB first
+    print("=== NLLB Backend ===")
     translator = create_translator(
+        backend="nllb",
         progress_callback=lambda msg: print(f"  → {msg}")
     )
     
     test_texts = [
-        "مرحبا بالعالم",
-        "كيف حالك اليوم؟",
-        "أنا أحب تعلم اللغات الجديدة",
-        "هذا اختبار للترجمة الآلية",
+        ("مرحبا بالعالم", "casual"),
+        ("كيف حالك اليوم؟", "casual"),
+        ("عزف النصر مقاما", "religious"),
+        ("صاح شبل الكرار في الميدان", "religious"),
     ]
     
     print("\nTranslation results:")
-    print("-" * 50)
+    print("-" * 60)
     
-    for text in test_texts:
-        result = translator.translate(text)
-        print(f"AR: {result.original}")
+    for text, domain in test_texts:
+        result = translator.translate(text, domain=domain)
+        print(f"AR [{domain}]: {result.original}")
         print(f"EN: {result.translated}")
         print()
+    
+    # Test LLM if available
+    print("\n=== Testing LLM Backend (if Ollama available) ===")
+    try:
+        llm_translator = create_translator(
+            backend="llm",
+            llm_provider="ollama",
+            llm_model="llama3.2",
+            progress_callback=lambda msg: print(f"  → {msg}")
+        )
+        
+        for text, domain in test_texts:
+            result = llm_translator.translate(text, domain=domain)
+            print(f"AR [{domain}]: {result.original}")
+            print(f"EN (LLM): {result.translated}")
+            print()
+    except Exception as e:
+        print(f"LLM backend not available: {e}")
+        print("Install Ollama and run 'ollama pull llama3.2' to enable LLM translation")

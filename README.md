@@ -17,12 +17,16 @@ Automatically translate foreign language speech in videos to English subtitles u
 
 ## ✨ Features
 
-- **🎙️ Accurate Transcription** - OpenAI Whisper (large-v3) for Arabic speech recognition
+- **🎙️ Accurate Transcription** - faster-whisper (4x faster) with fine-tuned Arabic models
 - **🌐 Quality Translation** - Meta's NLLB-200 for Arabic→English translation  
 - **📝 Subtitle Generation** - Creates properly-timed SRT files
 - **🎬 Video Output** - Embeds subtitles (soft or burned-in) via ffmpeg
 - **💻 CLI & Web UI** - Use command line or drag-and-drop browser interface
 - **⚡ GPU Accelerated** - CUDA, MPS (Apple Silicon), or CPU
+- **🕌 Religious Content** - Specialized models for Quranic Arabic (5.8% WER!)
+- **🗣️ Dialect Support** - Hints for Egyptian, Levantine, Gulf, Maghrebi dialects
+
+> 📖 **For Arabic ASR details**, see [ARABIC_ASR.md](ARABIC_ASR.md) — includes model benchmarks, dialect detection, and optimization tips.
 
 ## 🚀 Quick Start
 

@@ -25,9 +25,17 @@ DEFAULT_CACHE_DIR = Path.home() / ".cache" / "arabic-video-translator"
 @dataclass
 class TranscriptionConfig:
     """Whisper transcription settings."""
-    model: str = "large-v3"
+    # Model options: large-v3, byne-arabic, quran, egyptian, code-switching, etc.
+    # See ARABIC_ASR.md for full list
+    model: str = "large-v3"  # Default to baseline; use "byne-arabic" for best Arabic
     language: str = "ar"
-    device: Optional[str] = None  # None = auto-detect
+    device: Optional[str] = None  # None = auto-detect (cuda > mps > cpu)
+    
+    # Arabic dialect hint: msa, egyptian, levantine, gulf, maghrebi, iraqi
+    dialect_hint: Optional[str] = None
+    
+    # Content type hint: general, religious, code-switching
+    content_type: Optional[str] = None
     
     # Model cache directory (where Whisper stores downloaded models)
     model_cache_dir: Optional[str] = None

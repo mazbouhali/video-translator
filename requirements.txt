@@ -2,10 +2,26 @@
 # Install: pip install -r requirements.txt
 
 # ═══════════════════════════════════════════════════════════
-# Core ML/AI
+# Core ML/AI - Speech Recognition
+# ═══════════════════════════════════════════════════════════
+# faster-whisper is RECOMMENDED: 4x faster, lower memory
+# Falls back to openai-whisper if unavailable
+faster-whisper>=1.0.0
+# openai-whisper>=20231117  # Fallback (uncomment if needed)
+
+# ═══════════════════════════════════════════════════════════
+# Audio Preprocessing - CRITICAL for Nasheeds
+# ═══════════════════════════════════════════════════════════
+# Demucs: Separates vocals from background music/drums
+# Essential for nasheeds with duff drums or music tracks
+demucs>=4.0.0
+# librosa: Audio analysis (optional, for auto-detection)
+librosa>=0.10.0
+
+# ═══════════════════════════════════════════════════════════
+# Core ML/AI - Translation & Models
 # ═══════════════════════════════════════════════════════════
 torch>=2.0.0
-openai-whisper>=20231117
 transformers>=4.35.0
 sentencepiece>=0.1.99
 
