@@ -1,57 +1,16 @@
-# Git
-.git
-.gitignore
-
-# Python
-__pycache__
-*.py[cod]
-*$py.class
-*.so
-.Python
-.env
-.venv
-env/
-venv/
-ENV/
-.eggs/
-*.egg-info/
-*.egg
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# Docker
-Dockerfile*
-docker-compose*.yml
-.docker/
-
-# Documentation
-README.md
-LICENSE
-*.md
-docs/
-
-# Data folders (mounted as volumes)
+# Don't include these in Docker build context
+ollama-models/
+models/
 input/
 output/
 temp/
-models/
 *.mp4
 *.mkv
 *.avi
 *.mov
-*.webm
-*.mp3
-*.wav
-
-# Misc
-.DS_Store
-Thumbs.db
+*.srt
+__pycache__/
+*.pyc
+.git/
+.env
 *.log
-.pytest_cache/
-.coverage
-htmlcov/
