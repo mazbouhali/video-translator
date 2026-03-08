@@ -52,6 +52,7 @@ def process_video_gradio(
     video_path: str,
     whisper_model: str,
     translation_model: str,
+    content_domain: str,
     output_mode: str,
     font_size: int,
     keep_arabic: bool,
@@ -64,6 +65,7 @@ def process_video_gradio(
         video_path: Path to uploaded video
         whisper_model: Whisper model selection
         translation_model: Translation model selection
+        content_domain: Content type (religious, nasheed, political, etc.)
         output_mode: "Soft Subtitles", "Burn-in Subtitles", or "SRT Only"
         keep_arabic: Whether to generate Arabic SRT
         progress: Gradio progress tracker
@@ -144,7 +146,7 @@ def process_video_gradio(
             pct = 0.55 + (0.3 * (i / max(num_segments, 1)))
             progress(pct, desc=f"🌐 Translating segment {i+1}/{num_segments}{eta(pct)}")
             
-            result = translator.translate(segment.get("text", ""))
+            result = translator.translate(segment.get("text", ""), domain=content_domain)
             translated_segments.append({
                 **segment,
                 "original_text": segment.get("text", ""),
@@ -286,7 +288,14 @@ def create_interface() -> gr.Blocks:
                         choices=["nllb", "nllb-large", "marian", "two_pass", "llm"],
                         value="nllb",
                         label="Translation Model",
-                        info="two_pass/llm = NLLB + Ollama refinement (requires Ollama running)"
+                        info="two_pass/llm = NLLB + Ollama refinement (best quality)"
+                    )
+                    
+                    content_domain = gr.Dropdown(
+                        choices=["general", "religious", "nasheed", "karbala", "political", "news", "casual"],
+                        value="religious",
+                        label="Content Type",
+                        info="Helps the translator use correct terminology"
                     )
                     
                     output_mode = gr.Radio(
@@ -387,6 +396,7 @@ def create_interface() -> gr.Blocks:
                 video_input,
                 whisper_model,
                 translation_model,
+                content_domain,
                 output_mode,
                 font_size,
                 keep_arabic
