@@ -150,12 +150,17 @@ GPU is **auto-detected** — no config needed for NVIDIA. AMD requires one extra
 | `medium` | 5 GB | RTX 3060 / RX 6700 XT |
 | `large-v3` | 10 GB | RTX 3080 / RX 6800 XT / **RX 9070 XT ✓** |
 
-### AMD GPU Setup (Linux only)
+### AMD GPU Notes
 
-1. Install [ROCm drivers](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/)
-2. Use `./start-amd.sh` instead of `./start.sh`
+AMD GPUs are **automatically configured** by the installer. No manual ROCm installation needed.
 
-> ⚠️ AMD GPUs only work on Linux with ROCm. On Windows, it falls back to CPU.
+Requirements (handled automatically):
+- Linux with kernel 6.8+ (for RDNA4 GPUs like RX 9070 series)
+- User added to `video` and `render` groups (installer does this)
+
+> ⚠️ AMD GPUs only work on Linux. On Windows/Mac, it falls back to CPU.
+> 
+> If GPU isn't detected after install, log out and back in (for group changes), then run `./start.sh`.
 
 ### Speed Comparison (10-minute video)
 
