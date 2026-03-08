@@ -10,3 +10,33 @@ services:
               capabilities: [gpu]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+
+  # Pull default model on first run
+  ollama-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Checking for llama3.2 model..."
+        if ! curl -s http://ollama:11434/api/tags | grep -q "llama3.2"; then
+          echo "Pulling llama3.2 model (first run, ~2GB)..."
+          curl -X POST http://ollama:11434/api/pull -d '{"name": "llama3.2", "stream": false}'
+          echo "Done!"
+        else
+          echo "Model already available"
+        fi
+    restart: "no"

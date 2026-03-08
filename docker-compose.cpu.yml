@@ -1,18 +1,36 @@
-# CPU-only override for systems without NVIDIA GPU
+# CPU-only override for systems without GPU
 # 
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.cpu.yml up
 
 services:
   translator:
-    # Remove GPU reservation
-    deploy:
-      resources:
-        reservations:
-          devices: []
-    
     # Override to use CPU
     environment:
       - CUDA_VISIBLE_DEVICES=-1
       - DEVICE=cpu
       # Use smaller model for CPU
       - WHISPER_MODEL=small
+
+  # Ollama runs on CPU (slower but works)
+  ollama:
+    # Base image, no GPU
+    image: ollama/ollama:latest
+
+  # Pull a smaller model for CPU
+  ollama-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Checking for llama3.2 model..."
+        if ! curl -s http://ollama:11434/api/tags | grep -q "llama3.2"; then
+          echo "Pulling llama3.2 model (first run, ~2GB)..."
+          curl -X POST http://ollama:11434/api/pull -d '{"name": "llama3.2", "stream": false}'
+          echo "Done!"
+        else
+          echo "Model already available"
+        fi
+    restart: "no"

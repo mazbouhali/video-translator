@@ -18,7 +18,7 @@ Automatically translate foreign language speech in videos to English subtitles u
 ## ✨ Features
 
 - **🎙️ Accurate Transcription** - faster-whisper (4x faster) with fine-tuned Arabic models
-- **🌐 Quality Translation** - Meta's NLLB-200 for Arabic→English translation  
+- **🌐 Quality Translation** - Meta's NLLB-200 + LLM refinement via bundled Ollama  
 - **📝 Subtitle Generation** - Creates properly-timed SRT files
 - **🎬 Video Output** - Embeds subtitles (soft or burned-in) via ffmpeg
 - **💻 CLI & Web UI** - Use command line or drag-and-drop browser interface
@@ -120,11 +120,22 @@ python -m app.web --port 8080
 
 **No configuration needed** — defaults work out of the box.
 
-To change model size, edit `docker-compose.yml`:
+### Whisper Model Size
+Edit `docker-compose.yml`:
 ```yaml
 environment:
   - WHISPER_MODEL=large    # Options: tiny, base, small, medium, large
 ```
+
+### Translation Backend
+In the Web UI, select your translation method:
+| Backend | Description |
+|---------|-------------|
+| `nllb` | Fast, good for general content |
+| `two_pass` | NLLB + LLM refinement (best for poetry, religious content) |
+| `llm` | LLM only (slowest, highest quality) |
+
+The LLM backend uses **Ollama** (bundled) with **llama3.2** — no API keys needed.
 
 ## 🎮 GPU Support
 
