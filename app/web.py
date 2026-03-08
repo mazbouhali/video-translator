@@ -40,7 +40,11 @@ def get_translator(model: str, device: Optional[str] = None):
     """Get or create a cached translator instance."""
     cache_key = f"{model}_{device}"
     if cache_key not in _translator_cache:
-        _translator_cache[cache_key] = create_translator(model=model, device=device)
+        # Handle backend selection vs model selection
+        if model in ("llm", "two_pass"):
+            _translator_cache[cache_key] = create_translator(backend=model, device=device)
+        else:
+            _translator_cache[cache_key] = create_translator(backend="nllb", model=model, device=device)
     return _translator_cache[cache_key]
 
 
@@ -279,10 +283,10 @@ def create_interface() -> gr.Blocks:
                     )
                     
                     translation_model = gr.Dropdown(
-                        choices=["nllb", "nllb-large", "marian"],
+                        choices=["nllb", "nllb-large", "marian", "two_pass", "llm"],
                         value="nllb",
                         label="Translation Model",
-                        info="NLLB recommended for best quality"
+                        info="two_pass/llm = NLLB + Ollama refinement (requires Ollama running)"
                     )
                     
                     output_mode = gr.Radio(
