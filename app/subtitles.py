@@ -210,6 +210,7 @@ def embed_subtitles(
     srt_path: str,
     output_path: str,
     burn_in: bool = False,
+    font_size: Optional[int] = None,
     progress_callback: Optional[Callable[[str], None]] = None
 ) -> str:
     """
@@ -245,6 +246,9 @@ def embed_subtitles(
     config = get_config()
     sub_config = config.subtitle
     
+    # Use provided font_size or fall back to config
+    actual_font_size = font_size if font_size is not None else sub_config.font_size
+    
     if progress_callback:
         mode = "burning in" if burn_in else "embedding soft"
         progress_callback(f"Processing video ({mode} subtitles)...")
@@ -257,7 +261,7 @@ def embed_subtitles(
         # Build ASS-style format string for subtitles filter
         subtitle_filter = (
             f"subtitles='{srt_escaped}':force_style='"
-            f"FontSize={sub_config.font_size},"
+            f"FontSize={actual_font_size},"
             f"PrimaryColour=&H00FFFFFF,"  # White (ABGR format)
             f"OutlineColour=&H00000000,"  # Black outline
             f"BorderStyle=3,"              # Opaque box

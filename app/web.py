@@ -49,6 +49,7 @@ def process_video_gradio(
     whisper_model: str,
     translation_model: str,
     output_mode: str,
+    font_size: int,
     keep_arabic: bool,
     progress: gr.Progress = gr.Progress()
 ) -> Tuple[Optional[str], Optional[str], Optional[str], str]:
@@ -162,7 +163,8 @@ def process_video_gradio(
                 str(video_path),
                 str(english_srt_path),
                 str(output_video_path),
-                burn_in=burn_in
+                burn_in=burn_in,
+                font_size=font_size
             )
             
             final_video_path = str(output_video_path)
@@ -189,6 +191,7 @@ def reapply_subtitles_gradio(
     video_path: str,
     srt_path: str,
     output_mode: str,
+    font_size: int,
     progress: gr.Progress = gr.Progress()
 ) -> Tuple[Optional[str], str]:
     """
@@ -213,7 +216,8 @@ def reapply_subtitles_gradio(
             str(video_path),
             str(srt_path),
             str(output_video_path),
-            burn_in=burn_in
+            burn_in=burn_in,
+            font_size=font_size
         )
         
         progress(1.0, desc="✅ Complete!")
@@ -288,6 +292,15 @@ def create_interface() -> gr.Blocks:
                         info="Soft = toggleable, Burn-in = permanent"
                     )
                     
+                    font_size = gr.Slider(
+                        minimum=12,
+                        maximum=72,
+                        value=24,
+                        step=2,
+                        label="Subtitle Font Size",
+                        info="Smaller for vertical/mobile videos"
+                    )
+                    
                     keep_arabic = gr.Checkbox(
                         label="Also generate Arabic SRT",
                         value=False
@@ -309,6 +322,13 @@ def create_interface() -> gr.Blocks:
                         choices=["Soft Subtitles", "Burn-in Subtitles"],
                         value="Burn-in Subtitles",
                         label="Output Mode"
+                    )
+                    reapply_font_size = gr.Slider(
+                        minimum=12,
+                        maximum=72,
+                        value=24,
+                        step=2,
+                        label="Subtitle Font Size"
                     )
                     reapply_btn = gr.Button(
                         "🔄 Re-apply Subtitles",
@@ -364,6 +384,7 @@ def create_interface() -> gr.Blocks:
                 whisper_model,
                 translation_model,
                 output_mode,
+                font_size,
                 keep_arabic
             ],
             outputs=[
@@ -380,7 +401,8 @@ def create_interface() -> gr.Blocks:
             inputs=[
                 video_input,
                 srt_input,
-                reapply_mode
+                reapply_mode,
+                reapply_font_size
             ],
             outputs=[
                 video_output,
