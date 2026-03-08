@@ -91,13 +91,27 @@ def process_video_gradio(
         
         status_parts = []
         
+        import time as time_module
+        start_time = time_module.time()
+        
+        def elapsed():
+            return time_module.time() - start_time
+        
+        def eta(pct):
+            if pct <= 0:
+                return ""
+            remaining = (elapsed() / pct) * (1 - pct)
+            if remaining < 60:
+                return f" (~{int(remaining)}s left)"
+            return f" (~{int(remaining/60)}m left)"
+        
         # === Step 1: Transcription ===
         progress(0.1, desc="🎙️ Loading Whisper model...")
         
         progress(0.15, desc="🎙️ Extracting audio...")
         time.sleep(0.1)  # Small delay for UI update
         
-        progress(0.2, desc="🎙️ Transcribing Arabic speech...")
+        progress(0.2, desc=f"🎙️ Transcribing Arabic speech...{eta(0.2)}")
         transcription = transcribe_video(
             str(video_path),
             model_name=whisper_model,
@@ -105,7 +119,7 @@ def process_video_gradio(
         )
         
         num_segments = len(transcription["segments"])
-        status_parts.append(f"✓ Transcribed {num_segments} segments")
+        status_parts.append(f"✓ Transcribed {num_segments} segments ({int(elapsed())}s)")
         
         # Save Arabic SRT if requested
         if keep_arabic and arabic_srt_path:
@@ -117,13 +131,13 @@ def process_video_gradio(
         
         translator = get_translator(translation_model)
         
-        progress(0.55, desc="🌐 Translating to English...")
+        progress(0.55, desc=f"🌐 Translating to English...{eta(0.55)}")
         
         translated_segments = []
         for i, segment in enumerate(transcription["segments"]):
             # Update progress during translation
             pct = 0.55 + (0.3 * (i / max(num_segments, 1)))
-            progress(pct, desc=f"🌐 Translating segment {i+1}/{num_segments}...")
+            progress(pct, desc=f"🌐 Translating segment {i+1}/{num_segments}{eta(pct)}")
             
             result = translator.translate(segment.get("text", ""))
             translated_segments.append({
@@ -169,6 +183,46 @@ def process_video_gradio(
         
     except Exception as e:
         return None, None, None, f"❌ Error: {str(e)}"
+
+
+def reapply_subtitles_gradio(
+    video_path: str,
+    srt_path: str,
+    output_mode: str,
+    progress: gr.Progress = gr.Progress()
+) -> Tuple[Optional[str], str]:
+    """
+    Re-apply existing SRT to video (skip transcription/translation).
+    """
+    if not video_path:
+        return None, "❌ Please upload a video file."
+    if not srt_path:
+        return None, "❌ Please upload an SRT file."
+    
+    try:
+        video_path = Path(video_path)
+        srt_path = Path(srt_path)
+        output_dir = Path(tempfile.mkdtemp(prefix="avt_reapply_"))
+        
+        burn_in = output_mode == "Burn-in Subtitles"
+        output_video_path = output_dir / f"{video_path.stem}_subtitled{video_path.suffix}"
+        
+        progress(0.3, desc="🎬 Embedding subtitles...")
+        
+        embed_subtitles(
+            str(video_path),
+            str(srt_path),
+            str(output_video_path),
+            burn_in=burn_in
+        )
+        
+        progress(1.0, desc="✅ Complete!")
+        
+        mode_desc = "burned-in" if burn_in else "soft"
+        return str(output_video_path), f"✅ Created video with {mode_desc} subtitles"
+        
+    except Exception as e:
+        return None, f"❌ Error: {str(e)}"
 
 
 def create_interface() -> gr.Blocks:
@@ -244,6 +298,22 @@ def create_interface() -> gr.Blocks:
                     variant="primary",
                     size="lg"
                 )
+                
+                with gr.Accordion("🔄 Re-apply Subtitles (skip translation)", open=False):
+                    gr.Markdown("*Already have an SRT? Just embed it into the video.*")
+                    srt_input = gr.File(
+                        label="Upload SRT file",
+                        file_types=[".srt"]
+                    )
+                    reapply_mode = gr.Radio(
+                        choices=["Soft Subtitles", "Burn-in Subtitles"],
+                        value="Burn-in Subtitles",
+                        label="Output Mode"
+                    )
+                    reapply_btn = gr.Button(
+                        "🔄 Re-apply Subtitles",
+                        variant="secondary"
+                    )
             
             # Right column: Output
             with gr.Column(scale=1):
@@ -300,6 +370,20 @@ def create_interface() -> gr.Blocks:
                 video_output,
                 english_srt,
                 arabic_srt,
+                status_output
+            ],
+            show_progress="full"
+        )
+        
+        reapply_btn.click(
+            fn=reapply_subtitles_gradio,
+            inputs=[
+                video_input,
+                srt_input,
+                reapply_mode
+            ],
+            outputs=[
+                video_output,
                 status_output
             ],
             show_progress="full"
