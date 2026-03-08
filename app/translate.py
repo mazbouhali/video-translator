@@ -465,12 +465,17 @@ class TwoPassBackend(TranslationBackend):
         
         # Extract glossary hints for this specific text
         glossary_hints = self._extract_glossary_hints(text)
-        context_note = self._get_context(domain)
         
-        # Build enhanced system prompt
-        system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
-        if context_note:
-            system = f"{system}\n\nContext: {context_note}"
+        # Smart system prompt - LLM figures out context from the text itself
+        system = """You are an expert Arabic to English translator. You handle:
+- Religious content (Islamic nasheeds, Karbala, Shia/Sunni themes)
+- Political speeches (resistance movements, Middle East)
+- Poetry and classical Arabic
+- Casual conversation
+
+Use the glossary terms provided. Preserve emotional depth and poetic meaning.
+Keep vocatives like "Ya Hussein" as "O Hussein". Keep "Allahu Akbar" untranslated.
+Output ONLY the English translation, nothing else."""
         
         # Second pass: LLM refinement with glossary
         if glossary_hints:
@@ -508,11 +513,16 @@ Provide an improved, natural English translation. Output ONLY the translation:""
         # First pass all texts through NLLB (batched)
         nllb_translations = self.nllb.translate_batch(texts, domain)
         
-        # Get domain context once
-        context_note = self._get_context(domain)
-        base_system = DOMAIN_PROMPTS.get(domain, DOMAIN_PROMPTS["general"])
-        if context_note:
-            base_system = f"{base_system}\n\nContext: {context_note}"
+        # Smart system prompt - LLM figures out context
+        base_system = """You are an expert Arabic to English translator. You handle:
+- Religious content (Islamic nasheeds, Karbala, Shia/Sunni themes)
+- Political speeches (resistance movements, Middle East)
+- Poetry and classical Arabic
+- Casual conversation
+
+Use the glossary terms provided. Preserve emotional depth and poetic meaning.
+Keep vocatives like "Ya Hussein" as "O Hussein". Keep "Allahu Akbar" untranslated.
+Output ONLY the English translation, nothing else."""
         
         # Second pass: refine each with LLM + glossary
         results = []
